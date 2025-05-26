@@ -1,0 +1,26 @@
+From 9d7ac86ead5f299071b0476f110b7546fd5c5f3e Mon Sep 17 00:00:00 2001
+From: Nikita Maslo <nikitamalco203@gmail.com>
+Date: Tue, 6 May 2025 15:27:49 +0300
+Subject: [PATCH] test printf
+
+---
+ disk/part_custom.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/disk/part_custom.c b/disk/part_custom.c
+index 722634351e8..3eab93d49c9 100644
+--- a/disk/part_custom.c
++++ b/disk/part_custom.c
+@@ -44,6 +44,9 @@ static int part_get_info_custom(struct blk_desc *desc, int part, struct disk_par
+ 	strlcpy((char *)info->name, p->name, PART_NAME_LEN);
+ 	strlcpy((char *)info->type, BOOT_PART_TYPE, PART_TYPE_LEN);
+ 
++	printf("!got request: part: %i name: %s type: %s start: %lu size: %lu bsize: %lu\n", part,
++		info->name, info->type, info->start, info->size, info->blksz);
++
+ 	disk_partition_clr_uuid(info);
+ 	disk_partition_clr_type_guid(info);
+ 	return 0;
+-- 
+2.43.0
+

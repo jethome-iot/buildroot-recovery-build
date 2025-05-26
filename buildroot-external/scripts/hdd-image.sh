@@ -1,9 +1,8 @@
 #!/bin/bash
-set -e
 
 BOOTSTATE_SIZE=2M
-SYSTEM_SIZE=256M
-OVERLAY_SIZE=64M
+SYSTEM_SIZE=80M
+KERNEL_SIZE=40M
 
 function create_disk_image() {
     if [ -f "${BOARD_DIR}/genimage.cfg" ]; then
@@ -17,42 +16,38 @@ function create_disk_image() {
     export GENIMAGE_TMPPATH="${BUILD_DIR}/genimage.tmp"
 
     # variables from meta file
-    export DISK_SIZE BOOTLOADER BOOT_SIZE BOOT_SPL BOOT_SPL_SIZE
+    export DISK_SIZE BOOTLOADER KERNEL_FILE PARTITION_TABLE_TYPE BOOT_SIZE BOOT_SPL BOOT_SPL_SIZE
     # variables used in raucb manifest template
     ota_compatible="$(os_rauc_compatible)"
     ota_version="$(os_version)"
     export ota_compatible ota_version
     # variables used in genimage configs
-    export BOOTSTATE_SIZE SYSTEM_SIZE OVERLAY_SIZE BOOT_ENV_SIZE
+    export BOOTSTATE_SIZE SYSTEM_SIZE KERNEL_SIZE OVERLAY_SIZE DATA_SIZE
     RAUC_MANIFEST=$(tempio -template "${BR2_EXTERNAL_JHOS_PATH}/ota/manifest.raucm.gtpl")
     IMAGE_NAME="$(os_image_basename)"
-    TEST_PART="$(path_os_test)"
-    export IMAGE_NAME RAUC_MANIFEST
+    BOOT_SPL_TYPE=$(test "$BOOT_SPL" == "true" && echo "spl" || echo "nospl")
+    export RAUC_MANIFEST IMAGE_NAME BOOT_SPL_TYPE
     SYSTEM_IMAGE=$(path_rootfs_img)
-    export SYSTEM_IMAGE TEST_PART
+
+    export SYSTEM_IMAGE DATA_IMAGE
+
     trap 'rm -rf "${ROOTPATH_TMP}" "${GENIMAGE_TMPPATH}"' EXIT
     ROOTPATH_TMP="$(mktemp -d)"
 
     rm -rf "${GENIMAGE_TMPPATH}"
     # Generate boot FS image - run in a separate step with specific rootpath
-
     genimage \
-      --config "${BOARD_DIR}/genimage.cfg" \
+      --rootpath "$(path_boot_dir)" \
       --configdump - \
-      --rootpath "$(path_rootfs_img)" \
-      --outputpath "${GENIMAGE_OUTPUTPATH}"
+      --includepath "${BOARD_DIR}:${BR2_EXTERNAL_JHOS_PATH}/genimage" \
+      --config images-boot.cfg
 
-
-    #genimage \
-    #  --rootpath "$(path_boot_dir)" \
-    #  --configdump - \
-    #  --config "${BOARD_DIR}/genimage.cfg"
-
-    #rm -rf "${GENIMAGE_TMPPATH}"
+    rm -rf "${GENIMAGE_TMPPATH}"
     # Generate OS image (no files are copied to temporary rootpath here)
-    #genimage \
-    #  --rootpath "${ROOTPATH_TMP}" \
-    #  --configdump -
+    genimage \
+      --rootpath "${ROOTPATH_TMP}" \
+      --configdump - \
+      --includepath "${BOARD_DIR}:${BR2_EXTERNAL_JHOS_PATH}/genimage"
 }
 
 function convert_disk_image_virtual() {
@@ -84,7 +79,7 @@ function convert_disk_image_ova() {
 
     cp -a "${BOARD_DIR}/home-assistant.ovf" "${ova_data}/home-assistant.ovf"
     qemu-img convert -O vmdk -o subformat=streamOptimized,adapter_type=lsilogic "${hdd_img}" "${ova_data}/home-assistant.vmdk"
-    (cd "${ova_data}" || exit 1; "${HOST_DIR}/bin/openssl" sha256 home-assistant.* >home-assistant.mf)
+    (cd "${ova_data}" || exit 1; "${HOST_DIR}/bin/openssl" sha256 home-assistant.* | sed 's/SHA2-256/SHA256/' > home-assistant.mf)
     tar -C "${ova_data}" --owner=root --group=root -cf "${hdd_ova}" home-assistant.ovf home-assistant.vmdk home-assistant.mf
 }
 

@@ -2,7 +2,7 @@
 # shellcheck disable=SC2155
 
 # shellcheck source=../../../scripts/burn.sh
-. "${SCRIPT_DIR}/burn.sh"
+#. "${SCRIPT_DIR}/burn.sh"
 
 function os_pre_image() {
     local BOOT_DATA="$(path_boot_dir)"

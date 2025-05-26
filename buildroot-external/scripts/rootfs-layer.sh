@@ -20,17 +20,17 @@ function fix_rootfs() {
     rm -f "${TARGET_DIR}/usr/lib/systemd/system/sysinit.target.wants/systemd-update-done.service"
 
     # Fix: tempfs with /srv
-    sed -i "/srv/d" "${TARGET_DIR}/usr/lib/tmpfiles.d/home.conf"
+    sed -i "/srv/d" "${TARGET_DIR}/usr/lib/tmpfiles.d/home.conf" || true
 
     # Fix: Could not generate persistent MAC address
-    sed -i "s/MACAddressPolicy=persistent/MACAddressPolicy=none/g" "${TARGET_DIR}/usr/lib/systemd/network/99-default.link"
+    sed -i "s/MACAddressPolicy=persistent/MACAddressPolicy=none/g" "${TARGET_DIR}/usr/lib/systemd/network/99-default.link" || true
 
     # Use systemd-resolved for Host OS resolve
-    sed -i '/^hosts:/ {/resolve/! s/files/resolve [!UNAVAIL=return] files/}' "${TARGET_DIR}/etc/nsswitch.conf"
+    sed -i '/^hosts:/ {/resolve/! s/files/resolve [!UNAVAIL=return] files/}' "${TARGET_DIR}/etc/nsswitch.conf" || true
 
     # Remove e2scrub (LVM specific tools provided by e2fsprogs)
-    rm -f "/usr/lib/systemd/system/e2scrub*"
-    rm -f "/usr/sbin/e2scrub*" "/usr/lib/e2fsprogs/e2scrub*"
+    rm -f "/usr/lib/systemd/system/e2scrub*" || true
+    rm -f "/usr/sbin/e2scrub*" "/usr/lib/e2fsprogs/e2scrub*" || true
 }
 
 

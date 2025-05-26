@@ -1,69 +1,99 @@
-###########################################
-setenv mmc_env 40000
-
-mmc dev 0
-
+part start ${devtype} ${devnum} 9 mmc_env
+${devtype} dev ${devnum}
 setenv loadbootstate " \
-    echo "loading env..."; \
-    mmc read ${ramdisk_addr_r} ${mmc_env} 0x10; \
+    echo 'loading env...'; \
+    ${devtype} read ${ramdisk_addr_r} ${mmc_env} 0x10; \
     env import -c ${ramdisk_addr_r} 0x2000;"
 
 setenv storebootstate " \
     echo 'storing env...'; \
     env export -c -s 0x2000 ${ramdisk_addr_r} BOOT_ORDER BOOT_A_LEFT BOOT_B_LEFT MACHINE_ID; \
-    mmc write ${ramdisk_addr_r} ${mmc_env} 0x10;"
+    ${devtype} write ${ramdisk_addr_r} ${mmc_env} 0x10;"
 
 run loadbootstate
 test -n "${BOOT_ORDER}" || setenv BOOT_ORDER "A B"
 test -n "${BOOT_A_LEFT}" || setenv BOOT_A_LEFT 3
 test -n "${BOOT_B_LEFT}" || setenv BOOT_B_LEFT 3
 
-# blkdevparts env
-setenv bootargs_devpart "blkdevparts=mmcblk0:124M@4M(os-reserved),2M@128M(os-bootstate),256M@130M(os-systemA),256M@386M(os-systemB),64M@642M(os-overlay),318M@706M(os-reserved_end)"
 # Allows ConditionFirstBoot=
 test -n "${MACHINE_ID}" || setenv BOOT_CONDITION "systemd.condition-first-boot=true"
 
-# JHOS bootargs
-test -n "${bootargs_devpart}" || setenv bootargs_os "zram.enabled=1 zram.num_devices=3 systemd.machine_id=${MACHINE_ID} clk_ignore_unused usb-storage.quirks=0x2537:0x1066:u,0x2537:0x1068:u fsck.repair=yes ${BOOT_CONDITION}"
+# JHaOS bootargs
+setenv bootargs_hassos "zram.enabled=1 zram.num_devices=3 systemd.machine_id=${MACHINE_ID} clk_ignore_unused usb-storage.quirks=0x2537:0x1066:u,0x2537:0x1068:u fsck.repair=yes ${BOOT_CONDITION}"
+
 
 # Load board vars
 
-if test -n "${board_name}"; then setenv bootargs_os "${bootargs_os} board=${board}"; fi
+if test -n "${board_name}"; then setenv bootargs_hassos "${bootargs_hassos} board=${board}"; fi
 
-if test -n "${ethaddr}"; then setenv bootargs_os "${bootargs_os} mac=${ethaddr}";
-else if test -n "${mac}"; then setenv bootargs_os "${bootargs_os} mac=${mac}" ; fi
+if test -n "${ethaddr}"; then setenv bootargs_hassos "${bootargs_hassos} mac=${ethaddr}";
+else if test -n "${mac}"; then setenv bootargs_hassos "${bootargs_hassos} mac=${mac}" ; fi
 fi
 
-if test -n "${serial}"; then setenv bootargs_os "${bootargs_os} serial=${serial}"; fi
-if test -n "${usid}"; then setenv bootargs_os "${bootargs_os} usid=${usid}"; fi
+if test -n "${serial}"; then setenv bootargs_hassos "${bootargs_hassos} serial=${serial}"; fi
+if test -n "${usid}"; then setenv bootargs_hassos "${bootargs_hassos} usid=${usid}"; fi
 
 # JHaOS system A/B
-test -n "${bootargs_a}" || setenv bootargs_a "root=/dev/mmcblk0p3 ro rootwait"
-test -n "${bootargs_b}" || setenv bootargs_b "root=/dev/mmcblk0p4 ro rootwait"
+setenv bootargs_a "root=PARTUUID=48617373-06 ro rootwait"
+setenv bootargs_b "root=PARTUUID=48617373-08 ro rootwait"
+
+# Load environment from haos-config.txt
+if test -e ${devtype} ${devnum}:1 haos-config.txt; then
+  fatload ${devtype} ${devnum}:1 ${ramdisk_addr_r} haos-config.txt
+  env import -t ${ramdisk_addr_r} ${filesize}
+fi
+
+# Load extraargs
+  fileenv ${devtype} ${devnum}:1 ${ramdisk_addr_r} cmdline.txt cmdline
 
 echo "Checking board setup"
-if test "$board" = "jethub-j200"; then
-  echo "Use JetHub D2 DT file"
+if test "$board" = "jethub-j100"; then
+    if test "$perev" = "02"; then
+    # D1P + RTL8822CS
+        echo "Applying DT kernel file for JetHub D1/P RTL8822CS device"
+        setenv fdtfile "amlogic/meson-axg-jethome-jethub-j110-rev-2.dtb"
+    fi;
+    if test "$perev" = "03"; then
+    # D1P + W155S1
+        echo "Applying DT kernel file for JetHub D1/P W155S1 device"
+        setenv fdtfile "amlogic/meson-axg-jethome-jethub-j110-rev-3.dtb"
+    fi;
 fi;
 
-if test "$board" = "jethub-j80"; then
-  echo "Loading device tree boot/meson-gxl-s905w-jethome-jethub-j80.dtb"
-  erofsload mmc 0:3 ${fdt_addr_r} boot/meson-gxl-s905w-jethome-jethub-j80.dtb
+if test "$board" = "jethub-j200"; then
+  echo "Use JetHub D2 DT file"
+  erofsload mmc 0:5 ${fdt_addr_r} boot/meson-sm1-jethome-jethub-j200.dtb
   fdt addr ${fdt_addr_r}
 fi;
 
-#Partition	        Offset	Size	 Index
-#uboot	            0M	    4МБ    (not in partition)
-#os-reserved	      4M	    124M	 mmc 0:1
-#os-bootstate	    128M	    2M	   mmc 0:2
-#os-systemA	      130M	    256M	 mmc 0:3
-#os-systemB	      386M	    256M	 mmc 0:4
-#os-overlay	      642M	    64М	   mmc 0:5
-#os-reserved_end  706M      318M   mmc 0:6
+echo "Loading device tree ${fdtfile}"
+fatload ${devtype} ${devnum}:1 ${fdt_addr_r} ${fdtfile}
+fdt addr ${fdt_addr_r}
 
+# load dt overlays
+fdt resize 65536
+for overlay_file in ${overlays}; do
+  if fatload ${devtype} ${devnum}:1 ${ramdisk_addr_r} overlays/${overlay_file}.dtbo; then
+    echo "Applying kernel provided DT overlay ${overlay_file}.dtbo"
+    fdt apply ${ramdisk_addr_r} || setenv overlay_error "true"
+  fi
+done
+if test "${overlay_error}" = "true"; then
+  echo "Error applying DT overlays, restoring original DT"
+  fatload ${devtype} ${devnum}:1 ${fdt_addr_r} ${fdtfile}
+fi
+
+# logical volumes get numbered after physical ones.
+# 1. boot
+# 2. Extended partition
+# 3. Overlay
+# 4. Data
+# 5. KernelA
+# 6. SystemA
+# 7. KernelB
+# 8. SystemB
+# 9. BootInfo
 setenv bootargs
-#echo "bootorder ${BOOT_ORDER}"
-
 for BOOT_SLOT in "${BOOT_ORDER}"; do
   if test "x${bootargs}" != "x"; then
     # skip remaining slots
@@ -71,16 +101,16 @@ for BOOT_SLOT in "${BOOT_ORDER}"; do
     if test ${BOOT_A_LEFT} -gt 0; then
       setexpr BOOT_A_LEFT ${BOOT_A_LEFT} - 1
       echo "Trying to boot slot A, ${BOOT_A_LEFT} attempts remaining. Loading kernel ..."
-      if erofsload mmc 0:3 ${kernel_addr_r} /boot/Image; then
-          setenv bootargs "${bootargs_os} ${bootargs_a} rauc.slot=A rootfstype=erofs ${bootargs_devpart}"
+      if load ${devtype} ${devnum}:5 ${kernel_addr_r} /boot/Image; then
+          setenv bootargs "${bootargs_hassos} ${bootargs_a} rauc.slot=A ${cmdline}"
       fi
     fi
   elif test "x${BOOT_SLOT}" = "xB"; then
     if test ${BOOT_B_LEFT} -gt 0; then
       setexpr BOOT_B_LEFT ${BOOT_B_LEFT} - 1
       echo "Trying to boot slot B, ${BOOT_B_LEFT} attempts remaining. Loading kernel ..."
-      if erofsload mmc 0:4 ${kernel_addr_r} /boot/Image; then
-          setenv bootargs "${bootargs_os} ${bootargs_b} rauc.slot=B rootfstype=erofs ${bootargs_devpart}"
+      if load ${devtype} ${devnum}:6 ${kernel_addr_r} /boot/Image; then
+          setenv bootargs "${bootargs_hassos} ${bootargs_b} rauc.slot=B ${cmdline}"
       fi
     fi
   fi

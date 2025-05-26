@@ -1,0 +1,26 @@
+From 528f55ef360fc56879071a275d1bfa525de46ebb Mon Sep 17 00:00:00 2001
+From: Nikita Maslo <nikitamalco203@gmail.com>
+Date: Thu, 15 May 2025 15:03:19 +0300
+Subject: [PATCH] fix u-boot script
+
+---
+ include/config_distro_bootcmd.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/include/config_distro_bootcmd.h b/include/config_distro_bootcmd.h
+index 0c1a8bd8179..0f037a08601 100644
+--- a/include/config_distro_bootcmd.h
++++ b/include/config_distro_bootcmd.h
+@@ -538,6 +538,9 @@
+ 		"echo \"Checking board setup\"; " \
+ 		"if test \"$board\" = \"jethub-j200\"; then " \
+ 			"echo \"Use JetHub D2 DT file\"; " \
++			"echo \"Loading device tree boot/meson-sm1-jethome-jethub-j200.dtb\"; " \
++			"erofsload mmc 0:3 ${fdt_addr_r} boot/meson-sm1-jethome-jethub-j200.dtb; " \
++			"fdt addr ${fdt_addr_r}; " \
+ 		"fi; " \
+ 		"if test \"$board\" = \"jethub-j80\"; then " \
+ 			"echo \"Loading device tree boot/meson-gxl-s905w-jethome-jethub-j80.dtb\"; " \
+-- 
+2.43.0
+
