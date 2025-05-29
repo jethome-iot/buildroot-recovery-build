@@ -2,7 +2,7 @@
 
 function fix_rootfs() {
 
-    chmod +x "${BOARD_DIR}/jethome/jethub-j200/rootfs-overlay/etc/init.d/rcS"
+    chmod +x "${BOARD_DIR}/rootfs-overlay/etc/init.d/rcS"
 
 }
 
