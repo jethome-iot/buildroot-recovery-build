@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
         bash \
+        genext2fs \
         bc \
         binutils \
         build-essential \
