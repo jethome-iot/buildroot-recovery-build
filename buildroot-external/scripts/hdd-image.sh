@@ -1,8 +1,8 @@
 #!/bin/bash
 
 BOOTSTATE_SIZE=2M
-SYSTEM_SIZE=80M
-KERNEL_SIZE=40M
+SYSTEM_SIZE=50M
+KERNEL_SIZE=21M
 
 function create_disk_image() {
     if [ -f "${BOARD_DIR}/genimage.cfg" ]; then

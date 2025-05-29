@@ -24,6 +24,10 @@ savedefconfig:
 	@echo "config $*"
 	$(MAKE) -C $(BUILDROOT) O=$(O) BR2_EXTERNAL=$(BUILDROOT_EXTERNAL) "savedefconfig"
 
+menuconfig:
+	@echo "menuconfig $*"
+	$(MAKE) -C $(BUILDROOT) O=$(O) BR2_EXTERNAL=$(BUILDROOT_EXTERNAL) "menuconfig"
+
 $(TARGETS_CONFIG): %-config:
 	@echo "config $*"
 	$(MAKE) -C $(BUILDROOT) O=$(O) BR2_EXTERNAL=$(BUILDROOT_EXTERNAL) "$*_defconfig"

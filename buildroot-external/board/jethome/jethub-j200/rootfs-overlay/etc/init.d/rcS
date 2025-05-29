@@ -1,0 +1,12 @@
+#!/bin/sh
+echo "Starting rcS"
+/bin/mount -a
+/sbin/mdev -s
+mkdir -p /tmp/etc
+cp /etc/passwd /etc/shadow /etc/resolv.conf /etc/wpa_supplicant.conf /tmp/etc/
+mount --bind /tmp/etc /etc
+/bin/hostname -F /etc/hostname
+/sbin/modprobe rtw_8821cu
+/sbin/ifup -a
+/sbin/udhcpc -i eth0
+/sbin/udhcpc -i wlan0
