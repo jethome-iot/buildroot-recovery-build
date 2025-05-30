@@ -2,7 +2,9 @@
 
 function fix_rootfs() {
 
-    chmod +x "${BOARD_DIR}/rootfs-overlay/etc/init.d/rcS"
+    #rm -f "${TARGET_DIR}/etc/wpa_supplicant.conf"
+
+    chmod +x "${BOARD_DIR}/rootfs-overlay/etc_rofs/init.d/rcS" || true
 
 }
 
