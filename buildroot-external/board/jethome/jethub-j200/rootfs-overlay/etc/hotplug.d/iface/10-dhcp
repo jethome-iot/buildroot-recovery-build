@@ -1,0 +1,7 @@
+#!/bin/sh
+
+[ "$ACTION" = "add" ] || exit 0
+[ "$INTERFACE" = "lo" ] && exit 0
+
+logger -t net "Interface $INTERFACE added — requesting DHCP"
+udhcpc -i "$INTERFACE" -q -n -b &

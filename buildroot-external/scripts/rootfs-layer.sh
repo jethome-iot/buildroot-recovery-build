@@ -2,9 +2,10 @@
 
 function fix_rootfs() {
 
-    #rm -f "${TARGET_DIR}/etc/wpa_supplicant.conf"
-
-    chmod +x "${BOARD_DIR}/rootfs-overlay/etc_rofs/init.d/rcS" || true
+    chmod +x "${BOARD_DIR}/rootfs-overlay/etc/wpa_action.sh"
+    chmod +x "${BOARD_DIR}/rootfs-overlay/etc/hotplug.d/iface/10-dhcp"
+    chmod +x "${BOARD_DIR}/rootfs-overlay/etc/init.d/S02fixnetwork"
+    chmod +x "${BOARD_DIR}/rootfs-overlay/etc/init.d/wifi_setup.sh"
 
 }
 
