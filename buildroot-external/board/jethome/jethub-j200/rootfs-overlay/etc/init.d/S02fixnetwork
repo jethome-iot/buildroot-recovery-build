@@ -1,5 +1,9 @@
 #!/bin/sh
 # shellcheck disable=SC2045
+
+# Skip execution during shutdown or reboot
+[ "$1" = "stop" ] && exit 0
+
 echo "[init] Setting up resolv.conf overlay"
 mount -t tmpfs tmpfs /tmp
 if ! [ -L /etc/resolv.conf ]; then
@@ -14,7 +18,6 @@ fi
 
 echo "[init] Cleaning up previous WPA state..."
 rm -f /var/run/wpa_supplicant/wlan0
-pkill -f "wpa_supplicant.*wlan0"
 
 echo "[net] Starting WPA"
 [ -e /var/run/wpa_supplicant/wlan0 ] && rm -f /var/run/wpa_supplicant/wlan0
@@ -37,9 +40,9 @@ for iface in $(ls /sys/class/net); do
             done
 
             echo "[net] Starting udhcpc on $iface"
-            udhcpc -i "$iface" -q -n -b &
+            udhcpc -i "$iface" -q -n -b & #> /dev/null 2>&1 &
             ;;
     esac
 done
 
-[ -x /usr/bin/wifi_setup.sh ] && /etc/init.d/wifi_setup.sh
+#[ -x /usr/bin/wifi_setup.sh ] && /etc/init.d/wifi_setup.sh

@@ -9,6 +9,7 @@ function os_pre_image() {
 
     cp "${BINARIES_DIR}/boot.scr" "${BOOT_DATA}/boot.scr"
     mkdir -p "${BOOT_DATA}/amlogic"
+    rm -rf "${TARGET_DIR}/etc/shadow"
     cp "${BINARIES_DIR}/meson-axg-jethome-jethub-j100.dtb" "${BOOT_DATA}/amlogic/"
     cp "${BINARIES_DIR}/meson-axg-jethome-jethub-j110-rev-2.dtb" "${BOOT_DATA}/amlogic/"
     cp "${BINARIES_DIR}/meson-axg-jethome-jethub-j110-rev-3.dtb" "${BOOT_DATA}/amlogic/"

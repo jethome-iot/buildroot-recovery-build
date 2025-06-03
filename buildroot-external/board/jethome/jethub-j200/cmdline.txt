@@ -1,2 +1,1 @@
-console=tty0,115200n8 console=ttyAML0
-
+ console=tty0 console=ttyAML0,115200n8
