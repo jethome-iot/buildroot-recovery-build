@@ -6,24 +6,18 @@
 
 function os_pre_image() {
     local BOOT_DATA="$(path_boot_dir)"
-
+    dd if=/dev/zero of="${BINARIES_DIR}/env.blank" bs=64K count=1
     lzma -f -k -9 "${BINARIES_DIR}/Image"
 
-    #mkimage -A arm64 -O linux -T kernel -C lzma \
-    #-a 0x08200000 -e 0x08200000 \
-    #-n "JetHub Kernel (LZMA)" \
-    #-d "${BINARIES_DIR}/Image.lzma" "${BINARIES_DIR}/uImage"
-
-    mkdir -p kernel_root
-    cp "${BINARIES_DIR}/Image.lzma" kernel_root/
-    SIZE_KB=$(du -sk kernel_root | awk '{print int($1 * 1.3)}')
-    genext2fs -d kernel_root -b "$SIZE_KB" "${BINARIES_DIR}/kernel.ext4"
-    rm -rf kernel_root
+    mkdir -p sdimage
+    cp "${BINARIES_DIR}/spi-nor.img" sdimage || true
+    SIZE_KB=$(du -sk sdimage | awk '{print int($1 * 1.1)}') || true
+    genext2fs -d sdimage -b "$SIZE_KB" "${BINARIES_DIR}/spiimage.ext4" || true
+    rm -rf sdimage
 
     cp "${BINARIES_DIR}/boot.scr" "${BOOT_DATA}/boot.scr"
     mkdir -p "${BOOT_DATA}/amlogic"
     cp "${BINARIES_DIR}/meson-sm1-jethome-jethub-j200.dtb" "${BOOT_DATA}/amlogic/"
-
     if ls "${BINARIES_DIR}"/*.dtbo 1> /dev/null 2>&1; then
         echo "Found .dtbo files in ${BINARIES_DIR}"
         mkdir -p "${BOOT_DATA}/overlays"

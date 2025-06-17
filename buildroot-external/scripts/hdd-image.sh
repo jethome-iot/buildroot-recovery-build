@@ -1,8 +1,8 @@
 #!/bin/bash
 
-BOOTSTATE_SIZE=2M
-SYSTEM_SIZE=50M
-KERNEL_SIZE=21M
+SYSTEM_SIZE=18M
+KERNEL_SIZE=7M
+DATA_SIZE=1M
 
 function create_disk_image() {
     if [ -f "${BOARD_DIR}/genimage.cfg" ]; then
@@ -29,7 +29,7 @@ function create_disk_image() {
     export RAUC_MANIFEST IMAGE_NAME BOOT_SPL_TYPE
     SYSTEM_IMAGE=$(path_rootfs_img)
 
-    export SYSTEM_IMAGE DATA_IMAGE
+    export SYSTEM_IMAGE
 
     trap 'rm -rf "${ROOTPATH_TMP}" "${GENIMAGE_TMPPATH}"' EXIT
     ROOTPATH_TMP="$(mktemp -d)"
@@ -40,7 +40,7 @@ function create_disk_image() {
       --rootpath "$(path_boot_dir)" \
       --configdump - \
       --includepath "${BOARD_DIR}:${BR2_EXTERNAL_JHOS_PATH}/genimage" \
-      --config images-boot.cfg
+      --config genimage.cfg
 
     rm -rf "${GENIMAGE_TMPPATH}"
     # Generate OS image (no files are copied to temporary rootpath here)
@@ -48,6 +48,12 @@ function create_disk_image() {
       --rootpath "${ROOTPATH_TMP}" \
       --configdump - \
       --includepath "${BOARD_DIR}:${BR2_EXTERNAL_JHOS_PATH}/genimage"
+
+    genimage \
+      --rootpath "$(path_boot_dir)" \
+      --configdump - \
+      --includepath "${BOARD_DIR}:${BR2_EXTERNAL_JHOS_PATH}/genimage" \
+      --config genimage33.cfg
 }
 
 function convert_disk_image_virtual() {

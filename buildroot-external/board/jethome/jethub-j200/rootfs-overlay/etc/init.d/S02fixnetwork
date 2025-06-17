@@ -11,18 +11,19 @@ if ! [ -L /etc/resolv.conf ]; then
     ln -s /tmp/resolv.conf /etc/resolv.conf
 fi
 
-if [ ! -L /etc/wpa_supplicant.conf ]; then
-    cp /etc/wpa_supplicant.conf /tmp/wpa_supplicant.conf
-    ln -sf /tmp/wpa_supplicant.conf /etc/wpa_supplicant.conf
+# Setup wpa_supplicant.conf
+
+if [ ! -f /data/wpa_supplicant.conf ]; then
+    cp /etc/wpa_supplicant.conf /data/
 fi
+
+ln -sf /data/wpa_supplicant.conf /etc/wpa_supplicant.conf
 
 echo "[init] Cleaning up previous WPA state..."
 rm -f /var/run/wpa_supplicant/wlan0
 
 echo "[net] Starting WPA"
-[ -e /var/run/wpa_supplicant/wlan0 ] && rm -f /var/run/wpa_supplicant/wlan0
 wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf -B
-wpa_cli -a /etc/wpa_action.sh -i wlan0 -B
 
 echo "[net] Bringing up interfaces"
 for iface in $(ls /sys/class/net); do
@@ -40,7 +41,7 @@ for iface in $(ls /sys/class/net); do
             done
 
             echo "[net] Starting udhcpc on $iface"
-            udhcpc -i "$iface" -q -n -b & #> /dev/null 2>&1 &
+            udhcpc -i "$iface" -q -n -b #> /dev/null 2>&1
             ;;
     esac
 done

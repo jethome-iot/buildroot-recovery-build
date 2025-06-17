@@ -20,21 +20,18 @@ fi
 
 if test "$board" = "jethub-j200"; then
   echo "Use JetHub D2 DT file"
-  setenv fdtfile "amlogic/meson-sm1-jethome-jethub-j200.dtb"
-  load ${devtype} ${devnum}:1 ${fdt_addr_r} amlogic/meson-sm1-jethome-jethub-j200.dtb
+  setenv fdtfile "meson-sm1-jethome-jethub-j200.dtb"
+  load ${devtype} ${devnum}:1 ${fdt_addr_r} meson-sm1-jethome-jethub-j200.dtb
   fdt addr ${fdt_addr_r}
 fi;
 
-# Load extraargs
-fileenv ${devtype} ${devnum}:1 ${ramdisk_addr_r} cmdline.txt cmdline
-
 # JHaOS system
-setenv bootargs_root "root=PARTUUID=48617373-06 ro rootwait"
+setenv bootargs_root "root=PARTUUID=48617373-02 ro rootwait"
 
-setenv bootargs "${bootargs_jhos} ${bootargs_root} ${cmdline}"
+setenv bootargs "${bootargs_jhos} ${bootargs_root} console=tty0 console=ttyAML0,115200n8"
 
 echo "Loading LZMA-compressed kernel from mmc"
-if load ${devtype} ${devnum}:5 0x10000000 Image.lzma; then
+if load ${devtype} ${devnum}:1 0x10000000 Image.lzma; then
     echo "Image.lzma loaded successfully."
 
     if lzmadec 0x10000000 ${kernel_addr_r}; then
