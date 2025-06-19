@@ -13,12 +13,6 @@ fi
 
 # Setup wpa_supplicant.conf
 
-if [ ! -f /data/wpa_supplicant.conf ]; then
-    cp /etc/wpa_supplicant.conf /data/
-fi
-
-ln -sf /data/wpa_supplicant.conf /etc/wpa_supplicant.conf
-
 echo "[init] Cleaning up previous WPA state..."
 rm -f /var/run/wpa_supplicant/wlan0
 
@@ -41,7 +35,7 @@ for iface in $(ls /sys/class/net); do
             done
 
             echo "[net] Starting udhcpc on $iface"
-            udhcpc -i "$iface" -q -n -b #> /dev/null 2>&1
+            udhcpc -i "$iface" -q -n -b > /dev/null 2>&1
             ;;
     esac
 done

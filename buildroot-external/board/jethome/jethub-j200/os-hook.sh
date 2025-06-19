@@ -9,12 +9,6 @@ function os_pre_image() {
     dd if=/dev/zero of="${BINARIES_DIR}/env.blank" bs=64K count=1
     lzma -f -k -9 "${BINARIES_DIR}/Image"
 
-    mkdir -p sdimage
-    cp "${BINARIES_DIR}/spi-nor.img" sdimage || true
-    SIZE_KB=$(du -sk sdimage | awk '{print int($1 * 1.1)}') || true
-    genext2fs -d sdimage -b "$SIZE_KB" "${BINARIES_DIR}/spiimage.ext4" || true
-    rm -rf sdimage
-
     cp "${BINARIES_DIR}/boot.scr" "${BOOT_DATA}/boot.scr"
     mkdir -p "${BOOT_DATA}/amlogic"
     cp "${BINARIES_DIR}/meson-sm1-jethome-jethub-j200.dtb" "${BOOT_DATA}/amlogic/"

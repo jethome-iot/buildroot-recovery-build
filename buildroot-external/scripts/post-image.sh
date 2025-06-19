@@ -26,4 +26,4 @@ os_pre_image
 create_disk_image
 
 # Hook post image build stuff
-os_post_image
+#os_post_image

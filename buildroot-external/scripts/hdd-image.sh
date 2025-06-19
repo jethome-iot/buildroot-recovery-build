@@ -2,11 +2,10 @@
 
 SYSTEM_SIZE=18M
 KERNEL_SIZE=7M
-DATA_SIZE=1M
 
 function create_disk_image() {
-    if [ -f "${BOARD_DIR}/genimage.cfg" ]; then
-      echo "Using custom genimage.cfg from ${BOARD_DIR}"
+    if [ -f "${BOARD_DIR}/genimage-spi.cfg" ]; then
+      echo "Using custom genimage-spi.cfg from ${BOARD_DIR}"
     else
       echo "Using default genimage.cfg"
     fi
@@ -35,25 +34,29 @@ function create_disk_image() {
     ROOTPATH_TMP="$(mktemp -d)"
 
     rm -rf "${GENIMAGE_TMPPATH}"
-    # Generate boot FS image - run in a separate step with specific rootpath
+
     genimage \
       --rootpath "$(path_boot_dir)" \
-      --configdump - \
-      --includepath "${BOARD_DIR}:${BR2_EXTERNAL_JHOS_PATH}/genimage" \
-      --config genimage.cfg
+      --outputpath "${BINARIES_DIR}" \
+      --config "${BOARD_DIR}/genimage-spi.cfg"
+
 
     rm -rf "${GENIMAGE_TMPPATH}"
-    # Generate OS image (no files are copied to temporary rootpath here)
-    genimage \
-      --rootpath "${ROOTPATH_TMP}" \
-      --configdump - \
-      --includepath "${BOARD_DIR}:${BR2_EXTERNAL_JHOS_PATH}/genimage"
 
     genimage \
-      --rootpath "$(path_boot_dir)" \
-      --configdump - \
-      --includepath "${BOARD_DIR}:${BR2_EXTERNAL_JHOS_PATH}/genimage" \
-      --config genimage33.cfg
+      --rootpath "${ROOTPATH_TMP}" \
+      --outputpath "${BINARIES_DIR}" \
+      --config "${BOARD_DIR}/genimage-sdspi.cfg"
+
+    rm -rf "${GENIMAGE_TMPPATH}"
+
+    genimage \
+      --rootpath "${ROOTPATH_TMP}" \
+      --outputpath "${BINARIES_DIR}" \
+      --config "${BOARD_DIR}/genimage-sd.cfg"
+
+    rm -rf "${GENIMAGE_TMPPATH}"
+    rm -rf "${ROOTPATH_TMP}"
 }
 
 function convert_disk_image_virtual() {

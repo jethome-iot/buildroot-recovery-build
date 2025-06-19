@@ -50,7 +50,7 @@ function install_rauc_certs() {
 function install_bootloader_config() {
     if [ "${BOOTLOADER}" == "uboot" ]; then
         # shellcheck disable=SC1117
-        echo "/dev/mtd1 0x0 0x10000" > "${TARGET_DIR}/etc/fw_env.config"
+        echo "/dev/mtd2 0x0 0x10000" > "${TARGET_DIR}/etc/fw_env.config"
     fi
 
     # Fix MBR
