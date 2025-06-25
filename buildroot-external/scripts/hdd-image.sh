@@ -36,27 +36,23 @@ function create_disk_image() {
     rm -rf "${GENIMAGE_TMPPATH}"
 
     genimage \
-      --rootpath "$(path_boot_dir)" \
+      --rootpath "$(ROOTPATH_TMP)" \
+      --configdump - \
+      --tmppath "$GENIMAGE_TMPPATH" \
       --outputpath "${BINARIES_DIR}" \
       --config "${BOARD_DIR}/genimage-spi.cfg"
 
-
-    rm -rf "${GENIMAGE_TMPPATH}"
-
     genimage \
       --rootpath "${ROOTPATH_TMP}" \
+      --tmppath "$GENIMAGE_TMPPATH" \
       --outputpath "${BINARIES_DIR}" \
       --config "${BOARD_DIR}/genimage-sdspi.cfg"
 
-    rm -rf "${GENIMAGE_TMPPATH}"
-
     genimage \
       --rootpath "${ROOTPATH_TMP}" \
+      --tmppath "$GENIMAGE_TMPPATH" \
       --outputpath "${BINARIES_DIR}" \
       --config "${BOARD_DIR}/genimage-sd.cfg"
-
-    rm -rf "${GENIMAGE_TMPPATH}"
-    rm -rf "${ROOTPATH_TMP}"
 }
 
 function convert_disk_image_virtual() {

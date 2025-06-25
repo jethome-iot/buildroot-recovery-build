@@ -1,27 +1,28 @@
-From 0b31498192cec4e31c2c414083ab6be1dab7aa73 Mon Sep 17 00:00:00 2001
+From 161b556c138ac77150cfbc5db96377a5f1712c4c Mon Sep 17 00:00:00 2001
 From: Nikita Maslo <nikitamalco203@gmail.com>
 Date: Wed, 18 Jun 2025 18:28:27 +0300
 Subject: [PATCH] add uboot script rescue
 
 ---
- include/config_distro_bootcmd.h | 32 ++++++++++++++++++++++++++++++++
- include/configs/jethub.h        | 26 +++++++++++++++++++++-----
- 2 files changed, 53 insertions(+), 5 deletions(-)
+ include/config_distro_bootcmd.h | 60 ++++++++++++++++++++++++++++++++-
+ include/configs/jethub.h        | 26 +++++++++++---
+ 2 files changed, 80 insertions(+), 6 deletions(-)
 
 diff --git a/include/config_distro_bootcmd.h b/include/config_distro_bootcmd.h
-index 0a4e4b8ff85..e6f04cfa452 100644
+index 0a4e4b8ff85..5790278bb79 100644
 --- a/include/config_distro_bootcmd.h
 +++ b/include/config_distro_bootcmd.h
-@@ -509,6 +509,38 @@
+@@ -509,7 +509,41 @@
  			"run boot_extlinux; "                             \
  			"echo EXTLINUX FAILED: continuing...; "           \
  		"fi\0"                                                    \
-+	"boot_scrpit=" \
+-	\
++	"boot_script=" \
 +		"sf probe;" \
 +		"setenv bootargs_root \"root=/dev/mtdblock4 ro rootwait rootfs=erofs\"; " \
 +		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8\"; " \
-+		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),7M(kernel),-(rootfs) mtdids=nor0=spi0.0\"; " \
-+		"setenv bootargs_root \"${bootargs_console} ${bootargs_root} ${bootargs_mtdparts}\"; " \
++		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),-(rootfs) mtdids=nor0=spi0.0\"; " \
++		"setenv bootargs \"${bootargs_console} ${bootargs_root} ${bootargs_mtdparts}\"; " \
 +		"echo \"Loading LZMA-compressed kernel from mmc\"; " \
 +		"if sf read 0x10000000 0x00210000 0x00600000; then " \
 +			"echo \"Image.lzma loaded successfully.\"; " \
@@ -43,16 +44,50 @@ index 0a4e4b8ff85..e6f04cfa452 100644
 +		"reset\0" \
 +		\
 +	"bootcmd_check_button=" \
-+		"if gpio input aobus-banks10; then " \
-+		"run bootcmd_rescue; " \
++		"gpio input aobus-banks10; " \
++		"setenv button_state $?; " \
++		"if test ${button_state} -eq 1; then " \
++			"run bootcmd_rescue; " \
 +		"else " \
-+		"run boot_script; "	\
-+		"fi\0" \
- 	\
++			"run boot_script; " \
++		"fi;\0" \
++		\
  	"boot_a_script="                                                  \
  		"load ${devtype} ${devnum}:${distro_bootpart} "           \
+ 			"${scriptaddr} ${prefix}${script}; "              \
+@@ -527,6 +561,30 @@
+ 			"fi; "                                            \
+ 		"done\0"                                                  \
+ 	\
++	"rescue_single=" \
++    "echo \"Flashing haos_rescue.img to eMMC...\"; " \
++    "load usb 0:1 ${loadaddr} haos_rescue.img; " \
++    "setexpr blkcnt ${filesize} + 0x1FF; " \
++    "setexpr blkcnt ${blkcnt} / 0x200; " \
++    "mmc dev 1; " \
++    "mmc write ${loadaddr} 0x0 ${blkcnt}; " \
++    "echo \"Flashing complete. Rebooting...\"; " \
++    "reset; \0" \
++	\
++	"rescue_multipart=" \
++    "setenv partfiles 'aa ab ac ad ae af ag'; " \
++    "for part in ${partfiles}; do " \
++        "echo \"Loading rescue.img.part.${part}...\"; " \
++        "if load usb 0:1 ${loadaddr} rescue.img.part.${part}; then " \
++            "setexpr partblocks ${filesize} / 512; " \
++            "mmc write ${loadaddr} ${mmcblkstart} ${partblocks}; " \
++            "setexpr mmcblkstart ${mmcblkstart} + ${partblocks}; " \
++        "else " \
++            "echo \"Failed to load rescue.img.part.${part}, aborting...\"; " \
++            "reset; " \
++        "fi; " \
++    "done; \0" \
++	\
+ 	"scan_dev_for_boot="                                              \
+ 		"echo Scanning ${devtype} "                               \
+ 				"${devnum}:${distro_bootpart}...; "       \
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 699b2c3c899..70b5ef0c9ec 100644
+index 699b2c3c899..3e8d1778e67 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
 @@ -19,11 +19,27 @@
@@ -64,27 +99,27 @@ index 699b2c3c899..70b5ef0c9ec 100644
 -		"run bootcmd_mmc0; " \
 -		"run bootcmd_usb0;" \
 -		"fi;\0"
-+    "if gpio input aobus-banks10; then " \
-+        "echo \"Rescue button pressed, starting recovery...\"; " \
-+        "usb reset; " \
-+        "mmc dev 1; " \
-+        "setenv mmcblkstart 0; " \
-+		"setenv chunkfiles 'aa ab ac'; " \
-+        "setenv chunkblocks 0x1000000; " \
-+        "for part in ${chunkfiles}; do " \
-+            "echo \"Loading rescue.img.part.${part}...\"; " \
-+            "load usb 0:1 ${loadaddr} rescue.img.part.${part}; " \
-+            "mmc write ${loadaddr} ${mmcblkstart} ${chunkblocks}; " \
-+            "setexpr mmcblkstart ${mmcblkstart} + ${chunkblocks}; " \
-+        "done; " \
-+        "echo \"Loading final chunk (rescue.img.part.ad)...\"; " \
-+        "load usb 0:1 ${loadaddr} rescue.img.part.ad; " \
-+        "setexpr lastblocks ${filesize} / 512; " \
-+        "mmc write ${loadaddr} ${mmcblkstart} ${lastblocks}; " \
-+        "echo \"Flashing complete. Rebooting...\"; " \
-+        "reset; " \
-+    "fi;\0"
-+
++    "echo \"Rescue button pressed, starting recovery...\"; " \
++    "usb reset; " \
++    "mmc dev 1; " \
++    "setenv loadaddr 0x48000000; " \
++    "setenv mmcblkstart 0; " \
++    "setenv found 0; " \
++    "if load usb 0:1 ${loadaddr} haos_rescue.img; then " \
++        "echo \"Detected single haos_rescue.img, using block-wise flashing...\"; " \
++        "run rescue_single; " \
++        "setenv found 1; " \
++    "else " \
++        "if load usb 0:1 ${loadaddr} rescue.img.part.aa; then " \
++            "echo \"Detected split parts, using multi-part flashing...\"; " \
++            "run rescue_multipart; " \
++            "setenv found 1; " \
++        "fi; " \
++    "fi; " \
++    "if test ${found} -eq 0; then " \
++        "echo \"No rescue image found. Aborting...\"; " \
++    "fi; " \
++    "reset; \0"
  #else
  #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
  	"bootcmd_rescue=" \
