@@ -1,15 +1,15 @@
-From 161b556c138ac77150cfbc5db96377a5f1712c4c Mon Sep 17 00:00:00 2001
+From ff413b8b4213aad43ad18e23319a97bc55099386 Mon Sep 17 00:00:00 2001
 From: Nikita Maslo <nikitamalco203@gmail.com>
 Date: Wed, 18 Jun 2025 18:28:27 +0300
 Subject: [PATCH] add uboot script rescue
 
 ---
- include/config_distro_bootcmd.h | 60 ++++++++++++++++++++++++++++++++-
- include/configs/jethub.h        | 26 +++++++++++---
- 2 files changed, 80 insertions(+), 6 deletions(-)
+ include/config_distro_bootcmd.h | 72 ++++++++++++++++++++++++++++++++-
+ include/configs/jethub.h        | 26 +++++++++---
+ 2 files changed, 92 insertions(+), 6 deletions(-)
 
 diff --git a/include/config_distro_bootcmd.h b/include/config_distro_bootcmd.h
-index 0a4e4b8ff85..5790278bb79 100644
+index 0a4e4b8ff85..9fed9f6145b 100644
 --- a/include/config_distro_bootcmd.h
 +++ b/include/config_distro_bootcmd.h
 @@ -509,7 +509,41 @@
@@ -55,7 +55,7 @@ index 0a4e4b8ff85..5790278bb79 100644
  	"boot_a_script="                                                  \
  		"load ${devtype} ${devnum}:${distro_bootpart} "           \
  			"${scriptaddr} ${prefix}${script}; "              \
-@@ -527,6 +561,30 @@
+@@ -527,6 +561,42 @@
  			"fi; "                                            \
  		"done\0"                                                  \
  	\
@@ -70,15 +70,27 @@ index 0a4e4b8ff85..5790278bb79 100644
 +    "reset; \0" \
 +	\
 +	"rescue_multipart=" \
-+    "setenv partfiles 'aa ab ac ad ae af ag'; " \
-+    "for part in ${partfiles}; do " \
-+        "echo \"Loading rescue.img.part.${part}...\"; " \
-+        "if load usb 0:1 ${loadaddr} rescue.img.part.${part}; then " \
-+            "setexpr partblocks ${filesize} / 512; " \
++    "setenv partnum 0; " \
++    "setenv mmcblkstart 0; " \
++    "while true; do " \
++        "setexpr partstrnum ${partnum} + 0; " \
++        "if test ${partstrnum} -lt 10; then " \
++            "setenv partstr 0${partstrnum}; " \
++        "else " \
++            "setenv partstr ${partstrnum}; " \
++        "fi; " \
++        "echo \"Loading rescue.img.part.${partstr}...\"; " \
++        "if load usb 0:1 ${loadaddr} rescue.img.part.${partstr}; then " \
++            "setexpr partblocks ${filesize} + 511; " \
++            "setexpr partblocks ${partblocks} / 512; " \
++            "echo \"Writing ${partblocks} blocks to eMMC @ ${mmcblkstart}\"; " \
 +            "mmc write ${loadaddr} ${mmcblkstart} ${partblocks}; " \
 +            "setexpr mmcblkstart ${mmcblkstart} + ${partblocks}; " \
++            "setexpr partnum ${partnum} + 1; " \
 +        "else " \
-+            "echo \"Failed to load rescue.img.part.${part}, aborting...\"; " \
++            "echo \"No more parts. Rescue image complete.\"; " \
++            "echo \"Verifying MBR at LBA 0...\"; " \
++            "mmc dev 1; mmc read ${loadaddr} 0 1; md.b ${loadaddr} 0x200; " \
 +            "reset; " \
 +        "fi; " \
 +    "done; \0" \
@@ -87,7 +99,7 @@ index 0a4e4b8ff85..5790278bb79 100644
  		"echo Scanning ${devtype} "                               \
  				"${devnum}:${distro_bootpart}...; "       \
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 699b2c3c899..3e8d1778e67 100644
+index 699b2c3c899..865125c10e1 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
 @@ -19,11 +19,27 @@
@@ -110,7 +122,7 @@ index 699b2c3c899..3e8d1778e67 100644
 +        "run rescue_single; " \
 +        "setenv found 1; " \
 +    "else " \
-+        "if load usb 0:1 ${loadaddr} rescue.img.part.aa; then " \
++        "if load usb 0:1 ${loadaddr} rescue.img.part.00; then " \
 +            "echo \"Detected split parts, using multi-part flashing...\"; " \
 +            "run rescue_multipart; " \
 +            "setenv found 1; " \
