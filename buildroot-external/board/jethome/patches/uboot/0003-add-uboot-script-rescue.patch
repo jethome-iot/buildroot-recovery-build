@@ -1,15 +1,15 @@
-From aee61580ca0ba1212294492e554d81067ecb8e97 Mon Sep 17 00:00:00 2001
+From 58788d23edc0a1c23b234a241f16d55445427c8e Mon Sep 17 00:00:00 2001
 From: Nikita Maslo <nikitamalco203@gmail.com>
 Date: Wed, 18 Jun 2025 18:28:27 +0300
 Subject: [PATCH] add uboot script rescue
 
 ---
- include/config_distro_bootcmd.h | 47 +++++++++++++++++++++++++++++++++
- include/configs/jethub.h        | 16 +++++++----
- 2 files changed, 58 insertions(+), 5 deletions(-)
+ include/config_distro_bootcmd.h | 46 +++++++++++++++++++++++++++++++++
+ include/configs/jethub.h        | 18 +++++++++----
+ 2 files changed, 59 insertions(+), 5 deletions(-)
 
 diff --git a/include/config_distro_bootcmd.h b/include/config_distro_bootcmd.h
-index 0a4e4b8ff85..6c714d596a4 100644
+index 0a4e4b8ff85..e958da869a1 100644
 --- a/include/config_distro_bootcmd.h
 +++ b/include/config_distro_bootcmd.h
 @@ -510,6 +510,41 @@
@@ -19,10 +19,10 @@ index 0a4e4b8ff85..6c714d596a4 100644
 +	"boot_script=" \
 +		"sf probe;" \
 +		"setenv bootargs_root \"root=/dev/mtdblock4 ro rootwait rootfs=erofs\"; " \
-+		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8\"; " \
++		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8 fbcon=map:1\"; " \
 +		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),-(rootfs) mtdids=nor0=spi0.0\"; " \
 +		"setenv bootargs \"${bootargs_console} ${bootargs_root} ${bootargs_mtdparts}\"; " \
-+		"echo \"Loading LZMA-compressed kernel from mmc\"; " \
++		"echo \"Loading LZMA-compressed kernel from spi\"; " \
 +		"if sf read 0x10000000 0x00210000 0x00600000; then " \
 +			"echo \"Image.lzma loaded successfully.\"; " \
 +			"if lzmadec 0x10000000 ${kernel_addr_r}; then " \
@@ -43,18 +43,18 @@ index 0a4e4b8ff85..6c714d596a4 100644
 +		"reset\0" \
 +	\
 +	"bootcmd_check_button=" \
-+		"gpio input aobus-banks10; " \
-+		"setenv button_state $?; " \
-+		"if test ${button_state} -eq 1; then " \
-+			"run bootcmd_rescue; " \
-+		"else " \
-+			"run boot_script; " \
-+		"fi;\0" \
++    "gpio input periphs-banks70; " \
++    "setenv button_state $?; " \
++    "if test ${button_state} -eq 0; then " \
++        "run bootcmd_rescue; " \
++    "else " \
++        "run boot_script; " \
++    "fi\0" \
 +	\
  	"boot_a_script="                                                  \
  		"load ${devtype} ${devnum}:${distro_bootpart} "           \
  			"${scriptaddr} ${prefix}${script}; "              \
-@@ -527,6 +562,18 @@
+@@ -527,6 +562,17 @@
  			"fi; "                                            \
  		"done\0"                                                  \
  	\
@@ -63,21 +63,20 @@ index 0a4e4b8ff85..6c714d596a4 100644
 +    "if load usb 0:1 ${loadaddr} rescue.img.gz; then " \
 +        "setexpr imgsize ${filesize}; " \
 +        "gzwrite mmc 1 ${loadaddr} ${imgsize}; " \
-+        "echo \"Flashing complete. Rebooting...\"; " \
-+        "reset; " \
++        "echo \"Flashing complete.\"; " \
 +    "else " \
 +        "echo \"Failed to load rescue.img.gz!\"; " \
 +        "reset; " \
-+    "fi; \0" \
++    "fi\0" \
 +	\
  	"scan_dev_for_boot="                                              \
  		"echo Scanning ${devtype} "                               \
  				"${devnum}:${distro_bootpart}...; "       \
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 699b2c3c899..6f08660a417 100644
+index 699b2c3c899..4b3458756c6 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
-@@ -19,11 +19,17 @@
+@@ -19,11 +19,19 @@
  #elif defined(CONFIG_MESON_G12A)
  #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
  	"bootcmd_rescue=" \
@@ -93,8 +92,10 @@ index 699b2c3c899..6f08660a417 100644
 +    "if load usb 0:1 ${loadaddr} rescue.img.gz; then " \
 +        "echo \"Found rescue.img.gz, starting flash...\"; " \
 +        "run rescue_flash; " \
++		"echo \"Flashing done. Booting from eMMC\"; " \
++        "reset; " \
 +    "else " \
-+        "echo \"Error: rescue.img.gz not found. Aborting...\"; " \
++        "echo \"Error: rescue.img.gz not found. Reseting...\"; " \
 +        "reset; " \
 +    "fi; \0"
  #else
