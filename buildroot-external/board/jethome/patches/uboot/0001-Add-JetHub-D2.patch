@@ -1,31 +1,24 @@
-From 01c7f56694105ece1d6a1962226a2673eb44c180 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Viacheslav Bocharov <adeep@lexina.in>
 Date: Thu, 27 Jun 2024 16:20:54 +0300
-Subject: [PATCH 1/2] Add JetHub D2
+Subject: Add JetHub D2
 
 ---
- arch/arm/dts/Makefile                         |   3 +-
- .../meson-sm1-jethome-jethub-j200-u-boot.dtsi |  13 +
- .../arm/dts/meson-sm1-jethome-jethub-j200.dts | 654 ++++++++++++++++++
- board/amlogic/jethub-j200/MAINTAINERS         |   8 +
- board/amlogic/jethub-j200/Makefile            |   6 +
- board/amlogic/jethub-j200/jethub-j200.c       |  88 +++
- configs/jethub_j200_defconfig                 | 119 ++++
- doc/board/amlogic/index.rst                   |   1 +
- doc/board/amlogic/jethub-j200.rst             |  50 ++
- drivers/power/regulator/regulator-uclass.c    |   2 +-
- include/configs/jethub.h                      |   9 +
- 11 files changed, 951 insertions(+), 2 deletions(-)
- create mode 100644 arch/arm/dts/meson-sm1-jethome-jethub-j200-u-boot.dtsi
- create mode 100644 arch/arm/dts/meson-sm1-jethome-jethub-j200.dts
- create mode 100644 board/amlogic/jethub-j200/MAINTAINERS
- create mode 100644 board/amlogic/jethub-j200/Makefile
- create mode 100644 board/amlogic/jethub-j200/jethub-j200.c
- create mode 100644 configs/jethub_j200_defconfig
- create mode 100644 doc/board/amlogic/jethub-j200.rst
+ arch/arm/dts/Makefile                                  |   3 +-
+ arch/arm/dts/meson-sm1-jethome-jethub-j200-u-boot.dtsi |  13 +
+ arch/arm/dts/meson-sm1-jethome-jethub-j200.dts         | 654 ++++++++++
+ board/amlogic/jethub-j200/MAINTAINERS                  |   8 +
+ board/amlogic/jethub-j200/Makefile                     |   6 +
+ board/amlogic/jethub-j200/jethub-j200.c                |  89 ++
+ configs/jethub_j200_defconfig                          | 119 ++
+ doc/board/amlogic/index.rst                            |   1 +
+ doc/board/amlogic/jethub-j200.rst                      |  50 +
+ drivers/power/regulator/regulator-uclass.c             |   2 +-
+ include/configs/jethub.h                               |   9 +
+ 11 files changed, 952 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index 267b0179a5f..f504845b658 100644
+index 976dbda48c3..a648c36e111 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
 @@ -78,7 +78,8 @@ dtb-$(CONFIG_ARCH_S5P4418) += \
@@ -40,7 +33,7 @@ index 267b0179a5f..f504845b658 100644
  	tegra20-acer-a500-picasso.dtb \
 diff --git a/arch/arm/dts/meson-sm1-jethome-jethub-j200-u-boot.dtsi b/arch/arm/dts/meson-sm1-jethome-jethub-j200-u-boot.dtsi
 new file mode 100644
-index 00000000000..a6f11e8cdfb
+index 000000000000..111111111111
 --- /dev/null
 +++ b/arch/arm/dts/meson-sm1-jethome-jethub-j200-u-boot.dtsi
 @@ -0,0 +1,13 @@
@@ -59,7 +52,7 @@ index 00000000000..a6f11e8cdfb
 +};
 diff --git a/arch/arm/dts/meson-sm1-jethome-jethub-j200.dts b/arch/arm/dts/meson-sm1-jethome-jethub-j200.dts
 new file mode 100644
-index 00000000000..3151a99974c
+index 000000000000..111111111111
 --- /dev/null
 +++ b/arch/arm/dts/meson-sm1-jethome-jethub-j200.dts
 @@ -0,0 +1,654 @@
@@ -514,11 +507,11 @@ index 00000000000..3151a99974c
 +/* eMMC */
 +&sd_emmc_c {
 +	status = "okay";
-+	pinctrl-0 = <&emmc_ctrl_pins>, <&emmc_data_4b_pins>, <&emmc_ds_pins>;
++	pinctrl-0 = <&emmc_ctrl_pins>, <&emmc_data_8b_pins>, <&emmc_ds_pins>;
 +	pinctrl-1 = <&emmc_clk_gate_pins>;
 +	pinctrl-names = "default", "clk-gate";
 +
-+	bus-width = <4>;
++	bus-width = <8>;
 +	cap-mmc-highspeed;
 +	mmc-ddr-1_8v;
 +	mmc-hs200-1_8v;
@@ -531,7 +524,7 @@ index 00000000000..3151a99974c
 +};
 +
 +&spifc {
-+	status = "okay";
++	status = "disabled";
 +	pinctrl-0 = <&nor_pins>;
 +	pinctrl-names = "default";
 +
@@ -719,7 +712,7 @@ index 00000000000..3151a99974c
 +};
 diff --git a/board/amlogic/jethub-j200/MAINTAINERS b/board/amlogic/jethub-j200/MAINTAINERS
 new file mode 100644
-index 00000000000..82f4e1c40fd
+index 000000000000..111111111111
 --- /dev/null
 +++ b/board/amlogic/jethub-j200/MAINTAINERS
 @@ -0,0 +1,8 @@
@@ -733,7 +726,7 @@ index 00000000000..82f4e1c40fd
 +F:	include/configs/jethub.h
 diff --git a/board/amlogic/jethub-j200/Makefile b/board/amlogic/jethub-j200/Makefile
 new file mode 100644
-index 00000000000..cb1f5cbcb26
+index 000000000000..111111111111
 --- /dev/null
 +++ b/board/amlogic/jethub-j200/Makefile
 @@ -0,0 +1,6 @@
@@ -745,10 +738,10 @@ index 00000000000..cb1f5cbcb26
 +obj-y	:= jethub-j200.o
 diff --git a/board/amlogic/jethub-j200/jethub-j200.c b/board/amlogic/jethub-j200/jethub-j200.c
 new file mode 100644
-index 00000000000..60aa9566814
+index 000000000000..111111111111
 --- /dev/null
 +++ b/board/amlogic/jethub-j200/jethub-j200.c
-@@ -0,0 +1,88 @@
+@@ -0,0 +1,89 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Copyright (C) 2024 JetHome
@@ -756,6 +749,7 @@ index 00000000000..60aa9566814
 + *
 + */
 +
++//#include <common.h>
 +#include <dm.h>
 +#include <adc.h>
 +#include <env.h>
@@ -839,7 +833,7 @@ index 00000000000..60aa9566814
 +
 diff --git a/configs/jethub_j200_defconfig b/configs/jethub_j200_defconfig
 new file mode 100644
-index 00000000000..3ae5d885c58
+index 000000000000..111111111111
 --- /dev/null
 +++ b/configs/jethub_j200_defconfig
 @@ -0,0 +1,119 @@
@@ -963,10 +957,10 @@ index 00000000000..3ae5d885c58
 +CONFIG_GPIO_HOG=y
 +CONFIG_CMD_SPI=y
 diff --git a/doc/board/amlogic/index.rst b/doc/board/amlogic/index.rst
-index dcd935224ac..185717732c1 100644
+index 111111111111..222222222222 100644
 --- a/doc/board/amlogic/index.rst
 +++ b/doc/board/amlogic/index.rst
-@@ -97,6 +97,7 @@ Board Documentation
+@@ -95,6 +95,7 @@ Board Documentation
     beelink-gtkingpro
     jethub-j80
     jethub-j100
@@ -976,7 +970,7 @@ index dcd935224ac..185717732c1 100644
     khadas-vim3
 diff --git a/doc/board/amlogic/jethub-j200.rst b/doc/board/amlogic/jethub-j200.rst
 new file mode 100644
-index 00000000000..9441cf99bf8
+index 000000000000..111111111111
 --- /dev/null
 +++ b/doc/board/amlogic/jethub-j200.rst
 @@ -0,0 +1,50 @@
@@ -1031,10 +1025,10 @@ index 00000000000..9441cf99bf8
 +    $ dd if=fip/u-boot.bin.sd.bin of=$DEV conv=fsync,notrunc bs=512 skip=1 seek=1
 +    $ dd if=fip/u-boot.bin.sd.bin of=$DEV conv=fsync,notrunc bs=1 count=440
 diff --git a/drivers/power/regulator/regulator-uclass.c b/drivers/power/regulator/regulator-uclass.c
-index 09567eb9dbb..ae42148e70c 100644
+index 111111111111..222222222222 100644
 --- a/drivers/power/regulator/regulator-uclass.c
 +++ b/drivers/power/regulator/regulator-uclass.c
-@@ -191,7 +191,7 @@ int regulator_set_enable(struct udevice *dev, bool enable)
+@@ -186,7 +186,7 @@ int regulator_set_enable(struct udevice *dev, bool enable)
  			}
  		}
  	}
@@ -1044,7 +1038,7 @@ index 09567eb9dbb..ae42148e70c 100644
  }
 
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 2c44bfc853e..699b2c3c899 100644
+index 111111111111..222222222222 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
 @@ -2,6 +2,7 @@
@@ -1071,5 +1065,5 @@ index 2c44bfc853e..699b2c3c899 100644
  #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
  	"bootcmd_rescue=" \
 --
-2.43.0
+Armbian
 
