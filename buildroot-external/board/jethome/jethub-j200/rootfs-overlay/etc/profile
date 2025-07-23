@@ -1,0 +1,22 @@
+#!/bin/sh
+
+GREEN='\033[1;32m'
+RESET='\033[0m'
+
+echo -e "${GREEN}"
+
+#[ -f /etc/motd ] && cat /etc/motd
+
+echo "Hostname : $(hostname)"
+echo "Uptime   : $(uptime | cut -d',' -f1 | sed 's/^ *//')"
+
+IP=$(ip addr show | awk '/inet / && $2 !~ /^127/ {sub("/.*", "", $2); print $2; exit}')
+echo "IP       : ${IP:-<not connected>}"
+
+echo "Firmware : JETHUB_OS v1.0 (Jul 2025)"
+echo "Docs     : https://docs.jethome.com/"
+echo "Telegram : https://t.me/jethomeru"
+
+echo -e "${RESET}"
+
+

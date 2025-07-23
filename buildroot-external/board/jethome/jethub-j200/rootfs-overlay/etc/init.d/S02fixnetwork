@@ -13,8 +13,8 @@ fi
 
 # Setup wpa_supplicant.conf
 
-echo "[init] Cleaning up previous WPA state..."
-rm -f /var/run/wpa_supplicant/wlan0
+#echo "[init] Cleaning up previous WPA state..."
+#rm -f /var/run/wpa_supplicant/wlan0
 
 echo "[net] Starting WPA"
 wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf -B
