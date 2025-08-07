@@ -34,7 +34,8 @@ READABLE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
     echo "HOME_URL=https://jethome.com/"
     echo "VARIANT=\"${OS_NAME} ${BOARD_NAME}\""
     echo "VARIANT_ID=${BOARD_ID}"
-) > "${TARGET_DIR}/etс/os-release"
+) > "${TARGET_DIR}/usr/lib/os-release"
+ln -sf ../usr/lib/os-release "${TARGET_DIR}/etc/os-release"
 
 # Write machine-info
 (
