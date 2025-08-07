@@ -1,26 +1,67 @@
-From 25372c5ca87cc481e25e444159f0c6a50978f4cc Mon Sep 17 00:00:00 2001
+From bf2f55458b6b604cb752c2016891667a134c9716 Mon Sep 17 00:00:00 2001
 From: Nikita Maslo <nikitamalco203@gmail.com>
 Date: Thu, 7 Aug 2025 11:27:16 +0300
 Subject: [PATCH] add spi update uboot script
 
 ---
- include/configs/jethub.h | 33 +++++++++++++++++++++++++++++++--
- 1 file changed, 31 insertions(+), 2 deletions(-)
+ include/configs/jethub.h | 62 +++++++++++++++++++++++++++++++---------
+ 1 file changed, 48 insertions(+), 14 deletions(-)
 
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 43c80cf8163..eabd884c0e3 100644
+index 43c80cf8163..3b683b080d3 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
-@@ -43,9 +43,38 @@
-         "echo \"Failed to load rescue.img.gz!\"; " \
+@@ -19,19 +19,25 @@
+ #elif defined(CONFIG_MESON_G12A)
+ #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
+ 	"bootcmd_rescue=" \
+-	"echo \"Rescue button pressed, checking for rescue.img.gz...\"; " \
+-    "usb reset; " \
+-    "mmc dev 1; " \
+-    "setenv loadaddr 0x48000000; " \
+-    "if test -e usb 0:1 rescue.img.gz; then " \
+-        "echo \"Found rescue.img.gz, starting flash...\"; " \
+-        "run rescue_flash; " \
+-		"echo \"Flashing done. Booting from eMMC\"; " \
+-        "reset; " \
+-    "else " \
+-        "echo \"Error: rescue.img.gz not found. Reseting...\"; " \
+-        "reset; " \
+-    "fi\0" \
++		"echo \"Rescue button pressed, checking USB...\"; " \
++		"usb reset; " \
++		"mmc dev 1; " \
++		"setenv loadaddr 0x48000000; " \
++		"if test -e usb 0:1 rescue.img.gz; then " \
++			"echo \"Found rescue.img.gz, starting eMMC flash...\"; " \
++			"run rescue_flash; " \
++		"else " \
++			"echo \"rescue.img.gz not found, skipping eMMC flash.\"; " \
++		"fi; " \
++		"if test -e usb 0:1 spi-nor.img; then " \
++			"echo \"Found spi-nor.img, checking for SPI update...\"; " \
++			"run update_spi; " \
++		"else " \
++			"echo \"spi-nor.img not found, skipping SPI update.\"; " \
++		"fi; " \
++		"echo \"Done. Booting rescue system...\"; " \
++		"run boot_script; " \
++    "\0" \
+ 	\
+ 	"rescue_flash=" \
+     "echo \"Flashing rescue.img.gz to eMMC...\"; " \
+@@ -40,9 +46,37 @@
+         "gzwrite mmc 1 ${loadaddr} ${imgsize}; " \
+         "echo \"Flashing complete.\"; " \
+     "else " \
+-        "echo \"Failed to load rescue.img.gz!\"; " \
++        "echo \"Failed to load rescue.img.gz! Resetting...\"; " \
          "reset; " \
      "fi\0" \
 +	\
 +	"update_spi=" \
 +	"echo \"Checking for spi-nor.img on USB...\"; " \
-+	"usb reset; " \
 +	"sf probe; " \
-+	"setenv loadaddr 0x48000000; " \
 +	"if test -e usb 0:1 spi-nor.img; then " \
 +		"echo \"Found spi-nor.img, reading new version...\"; " \
 +		"load usb 0:1 ${loadaddr} spi-nor.img 0x40 0x00800000; " \
@@ -34,9 +75,9 @@ index 43c80cf8163..eabd884c0e3 100644
 +			"echo \"Newer version found, flashing SPI...\"; " \
 +			"load usb 0:1 ${loadaddr} spi-nor.img; " \
 +			"setexpr imgsize ${filesize}; " \
-+			"sf update ${loadaddr} 0 ${imgsize};\0"
++			"sf update ${loadaddr} 0 ${imgsize}; " \
 +			"echo \"SPI update complete. Rebooting...\"; " \
-+			"reset; " \
++			"run boot_script; " \
 +		"else " \
 +			"echo \"SPI is already newest version.\"; " \
 +			"run boot_script; " \
@@ -47,19 +88,7 @@ index 43c80cf8163..eabd884c0e3 100644
 +	"fi\0" \
  	\
  	"boot_script=" \
--		"sf probe;" \
- 		"setenv bootargs_root \"root=/dev/mtdblock4 ro rootwait rootfs=erofs\"; " \
- 		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8 fbcon=map:1\"; " \
- 		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),-(rootfs) mtdids=nor0=spi0.0\"; " \
-@@ -76,7 +105,7 @@
-     "if test ${button_state} -eq 0; then " \
-         "run bootcmd_rescue; " \
-     "else " \
--        "run boot_script; " \
-+        "run update_spi; " \
-     "fi\0"
- #else
- #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
+ 		"sf probe;" \
 -- 
 2.43.0
 
