@@ -1,4 +1,4 @@
-From 20664141193a5dafb87a936d5bc0b54cfbc23df2 Mon Sep 17 00:00:00 2001
+From 79adbe79318c87e5e86553dba02b19e8ad53b2fc Mon Sep 17 00:00:00 2001
 From: Nikita Maslo <nikitamalco203@gmail.com>
 Date: Mon, 4 Aug 2025 10:12:47 +0300
 Subject: [PATCH] add uboot script rescue
@@ -8,7 +8,7 @@ Subject: [PATCH] add uboot script rescue
  1 file changed, 59 insertions(+), 5 deletions(-)
 
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 699b2c3c899..8a53cedf14d 100644
+index 699b2c3c899..43c80cf8163 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
 @@ -19,11 +19,65 @@
@@ -32,7 +32,7 @@ index 699b2c3c899..8a53cedf14d 100644
 +    "else " \
 +        "echo \"Error: rescue.img.gz not found. Reseting...\"; " \
 +        "reset; " \
-+    "fi; \0"
++    "fi\0" \
 +	\
 +	"rescue_flash=" \
 +    "echo \"Flashing rescue.img.gz to eMMC...\"; " \
