@@ -1,14 +1,14 @@
-From bf2f55458b6b604cb752c2016891667a134c9716 Mon Sep 17 00:00:00 2001
+From e285eee5810940ead2330ce22a8ee06db1b20709 Mon Sep 17 00:00:00 2001
 From: Nikita Maslo <nikitamalco203@gmail.com>
 Date: Thu, 7 Aug 2025 11:27:16 +0300
 Subject: [PATCH] add spi update uboot script
 
 ---
- include/configs/jethub.h | 62 +++++++++++++++++++++++++++++++---------
- 1 file changed, 48 insertions(+), 14 deletions(-)
+ include/configs/jethub.h | 64 ++++++++++++++++++++++++++++++----------
+ 1 file changed, 49 insertions(+), 15 deletions(-)
 
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 43c80cf8163..3b683b080d3 100644
+index 43c80cf8163..4c0ae3546ea 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
 @@ -19,19 +19,25 @@
@@ -50,7 +50,7 @@ index 43c80cf8163..3b683b080d3 100644
  	\
  	"rescue_flash=" \
      "echo \"Flashing rescue.img.gz to eMMC...\"; " \
-@@ -40,9 +46,37 @@
+@@ -40,15 +46,43 @@
          "gzwrite mmc 1 ${loadaddr} ${imgsize}; " \
          "echo \"Flashing complete.\"; " \
      "else " \
@@ -64,11 +64,11 @@ index 43c80cf8163..3b683b080d3 100644
 +	"sf probe; " \
 +	"if test -e usb 0:1 spi-nor.img; then " \
 +		"echo \"Found spi-nor.img, reading new version...\"; " \
-+		"load usb 0:1 ${loadaddr} spi-nor.img 0x40 0x00800000; " \
++		"load usb 0:1 ${loadaddr} spi-nor.img 0x40 0x00810000; " \
 +		"env import -t ${loadaddr} 0x40; " \
 +		"setenv rescue_version_new ${rescue_version}; " \
 +		"echo \"New version: ${rescue_version_new}\"; " \
-+		"sf read ${loadaddr} 0x00800000 0x40; " \
++		"sf read ${loadaddr} 0x00810000 0x40; " \
 +		"env import -t ${loadaddr} 0x40; " \
 +		"echo \"Current SPI version: ${rescue_version}\"; " \
 +		"if itest ${rescue_version_new} -gt ${rescue_version}; then " \
@@ -89,6 +89,13 @@ index 43c80cf8163..3b683b080d3 100644
  	\
  	"boot_script=" \
  		"sf probe;" \
+ 		"setenv bootargs_root \"root=/dev/mtdblock4 ro rootwait rootfs=erofs\"; " \
+ 		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8 fbcon=map:1\"; " \
+-		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),-(rootfs) mtdids=nor0=spi0.0\"; " \
++		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),64k(version),-(rootfs) mtdids=nor0=spi0.0\"; " \
+ 		"setenv bootargs \"${bootargs_console} ${bootargs_root} ${bootargs_mtdparts}\"; " \
+ 		"echo \"Loading LZMA-compressed kernel from spi\"; " \
+ 		"if sf read 0x10000000 0x00210000 0x00600000; then " \
 -- 
 2.43.0
 
