@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # shellcheck disable=SC2045
 
 # Skip execution during shutdown or reboot
@@ -27,15 +27,17 @@ for iface in $(ls /sys/class/net); do
             echo "[net] Bringing up $iface"
             ip link set "$iface" up
 
-            echo "[net] Waiting for $iface to be READY..."
             for i in $(seq 1 10); do
                 carrier="/sys/class/net/$iface/carrier"
                 [ -f "$carrier" ] && [ "$(cat "$carrier")" = "1" ] && break
                 sleep 1
             done
 
-            echo "[net] Starting udhcpc on $iface"
+            echo "[net] Starting DHCP for $iface"
             udhcpc -i "$iface" -q -n -b > /dev/null 2>&1
+
+            ip=$(ip addr show "$iface" | awk '/inet / {print $2}')
+            echo "[net] $iface got IP: ${ip:-<none>}"
             ;;
     esac
 done

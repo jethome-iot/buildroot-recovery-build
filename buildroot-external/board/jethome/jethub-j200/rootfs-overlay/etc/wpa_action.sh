@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 IFACE="$1"
 CMD="$2"
