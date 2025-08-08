@@ -47,7 +47,7 @@ index 699b2c3c899..43c80cf8163 100644
 +	\
 +	"boot_script=" \
 +		"sf probe;" \
-+		"setenv bootargs_root \"root=/dev/mtdblock4 ro rootwait rootfs=erofs\"; " \
++		"setenv bootargs_root \"root=/dev/mtdblock5 ro rootwait rootfs=erofs\"; " \
 +		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8 fbcon=map:1\"; " \
 +		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),-(rootfs) mtdids=nor0=spi0.0\"; " \
 +		"setenv bootargs \"${bootargs_console} ${bootargs_root} ${bootargs_mtdparts}\"; " \
@@ -82,6 +82,6 @@ index 699b2c3c899..43c80cf8163 100644
  #else
  #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
  	"bootcmd_rescue=" \
--- 
+--
 2.43.0
 

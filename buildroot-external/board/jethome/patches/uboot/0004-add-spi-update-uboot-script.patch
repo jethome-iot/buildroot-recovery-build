@@ -1,14 +1,14 @@
-From e285eee5810940ead2330ce22a8ee06db1b20709 Mon Sep 17 00:00:00 2001
+From aa5e13bcf0d33c4a9114ffe9a65460220f2f1868 Mon Sep 17 00:00:00 2001
 From: Nikita Maslo <nikitamalco203@gmail.com>
 Date: Thu, 7 Aug 2025 11:27:16 +0300
 Subject: [PATCH] add spi update uboot script
 
 ---
- include/configs/jethub.h | 64 ++++++++++++++++++++++++++++++----------
- 1 file changed, 49 insertions(+), 15 deletions(-)
+ include/configs/jethub.h | 65 ++++++++++++++++++++++++++++++----------
+ 1 file changed, 50 insertions(+), 15 deletions(-)
 
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 43c80cf8163..4c0ae3546ea 100644
+index 43c80cf8163..a791aecb6a6 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
 @@ -19,19 +19,25 @@
@@ -50,9 +50,11 @@ index 43c80cf8163..4c0ae3546ea 100644
  	\
  	"rescue_flash=" \
      "echo \"Flashing rescue.img.gz to eMMC...\"; " \
-@@ -40,15 +46,43 @@
+@@ -39,16 +45,45 @@
+         "setexpr imgsize ${filesize}; " \
          "gzwrite mmc 1 ${loadaddr} ${imgsize}; " \
          "echo \"Flashing complete.\"; " \
++		"reset; " \
      "else " \
 -        "echo \"Failed to load rescue.img.gz!\"; " \
 +        "echo \"Failed to load rescue.img.gz! Resetting...\"; " \
@@ -89,13 +91,13 @@ index 43c80cf8163..4c0ae3546ea 100644
  	\
  	"boot_script=" \
  		"sf probe;" \
- 		"setenv bootargs_root \"root=/dev/mtdblock4 ro rootwait rootfs=erofs\"; " \
+ 		"setenv bootargs_root \"root=/dev/mtdblock5 ro rootwait rootfs=erofs\"; " \
  		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8 fbcon=map:1\"; " \
 -		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),-(rootfs) mtdids=nor0=spi0.0\"; " \
 +		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),64k(version),-(rootfs) mtdids=nor0=spi0.0\"; " \
  		"setenv bootargs \"${bootargs_console} ${bootargs_root} ${bootargs_mtdparts}\"; " \
  		"echo \"Loading LZMA-compressed kernel from spi\"; " \
  		"if sf read 0x10000000 0x00210000 0x00600000; then " \
--- 
+--
 2.43.0
 
