@@ -1,17 +1,17 @@
-From aa5e13bcf0d33c4a9114ffe9a65460220f2f1868 Mon Sep 17 00:00:00 2001
+From dc0ea873aa51e85eb4855bfb637e6988c4ca7b5e Mon Sep 17 00:00:00 2001
 From: Nikita Maslo <nikitamalco203@gmail.com>
 Date: Thu, 7 Aug 2025 11:27:16 +0300
 Subject: [PATCH] add spi update uboot script
 
 ---
- include/configs/jethub.h | 65 ++++++++++++++++++++++++++++++----------
- 1 file changed, 50 insertions(+), 15 deletions(-)
+ include/configs/jethub.h | 88 ++++++++++++++++++++++++++++++++--------
+ 1 file changed, 72 insertions(+), 16 deletions(-)
 
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
-index 43c80cf8163..a791aecb6a6 100644
+index 43c80cf8163..5f99ceec145 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
-@@ -19,19 +19,25 @@
+@@ -19,36 +19,92 @@
  #elif defined(CONFIG_MESON_G12A)
  #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
  	"bootcmd_rescue=" \
@@ -50,10 +50,21 @@ index 43c80cf8163..a791aecb6a6 100644
  	\
  	"rescue_flash=" \
      "echo \"Flashing rescue.img.gz to eMMC...\"; " \
-@@ -39,16 +45,45 @@
++	"gpio set aobus-banks11; " \
+     "if load usb 0:1 ${loadaddr} rescue.img.gz; then " \
          "setexpr imgsize ${filesize}; " \
          "gzwrite mmc 1 ${loadaddr} ${imgsize}; " \
          "echo \"Flashing complete.\"; " \
++		"gpio clear aobus-banks11; " \
++		"i=0; " \
++        "while test $i -lt 3; do " \
++            "gpio set periphs-banks21; " \
++            "sleep 0.3; " \
++            "gpio clear periphs-banks21; " \
++            "sleep 0.3; " \
++            "setexpr i $i + 1; " \
++        "done; " \
++		"echo \"Resetting...\"; " \
 +		"reset; " \
      "else " \
 -        "echo \"Failed to load rescue.img.gz!\"; " \
@@ -66,6 +77,7 @@ index 43c80cf8163..a791aecb6a6 100644
 +	"sf probe; " \
 +	"if test -e usb 0:1 spi-nor.img; then " \
 +		"echo \"Found spi-nor.img, reading new version...\"; " \
++		"gpio set aobus-banks11; " \
 +		"load usb 0:1 ${loadaddr} spi-nor.img 0x40 0x00810000; " \
 +		"env import -t ${loadaddr} 0x40; " \
 +		"setenv rescue_version_new ${rescue_version}; " \
@@ -78,7 +90,16 @@ index 43c80cf8163..a791aecb6a6 100644
 +			"load usb 0:1 ${loadaddr} spi-nor.img; " \
 +			"setexpr imgsize ${filesize}; " \
 +			"sf update ${loadaddr} 0 ${imgsize}; " \
++			"gpio clear aobus-banks11; " \
 +			"echo \"SPI update complete. Rebooting...\"; " \
++			"i=0; " \
++			"while test $i -lt 3; do " \
++				"gpio set periphs-banks21; " \
++				"sleep 0.3; " \
++				"gpio clear periphs-banks21; " \
++				"sleep 0.3; " \
++				"setexpr i $i + 1; " \
++			"done; " \
 +			"run boot_script; " \
 +		"else " \
 +			"echo \"SPI is already newest version.\"; " \
@@ -91,7 +112,8 @@ index 43c80cf8163..a791aecb6a6 100644
  	\
  	"boot_script=" \
  		"sf probe;" \
- 		"setenv bootargs_root \"root=/dev/mtdblock5 ro rootwait rootfs=erofs\"; " \
+-		"setenv bootargs_root \"root=/dev/mtdblock4 ro rootwait rootfs=erofs\"; " \
++		"setenv bootargs_root \"root=/dev/mtdblock5 ro rootwait rootfs=erofs\"; " \
  		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8 fbcon=map:1\"; " \
 -		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),-(rootfs) mtdids=nor0=spi0.0\"; " \
 +		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),64k(version),-(rootfs) mtdids=nor0=spi0.0\"; " \
