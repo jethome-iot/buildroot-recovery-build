@@ -1,30 +1,25 @@
-#!/bin/bash
-# shellcheck disable=SC2045
+#!/bin/sh
 
-# Skip execution during shutdown or reboot
 [ "$1" = "stop" ] && exit 0
 
-echo "[init] Setting up resolv.conf overlay"
-mount -t tmpfs tmpfs /tmp
-if ! [ -L /etc/resolv.conf ]; then
-    rm -f /etc/resolv.conf
-    ln -s /tmp/resolv.conf /etc/resolv.conf
-fi
+echo "[net] init start"
 
-# Setup wpa_supplicant.conf
+[ -d /run ] || mkdir -p /run
+[ -e /var/run ] || ln -sf /run /var/run
+mkdir -p /run/wpa_supplicant
 
-#echo "[init] Cleaning up previous WPA state..."
-#rm -f /var/run/wpa_supplicant/wlan0
+echo "[net] starting wpa_supplicant"
 
-echo "[net] Starting WPA"
-wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf -B
+wpa_supplicant -i wlan0 -c /etc/wpa_supplicant.conf -C /run/wpa_supplicant -B
 
-echo "[net] Bringing up interfaces"
+echo "[net] bringing up interfaces"
 for iface in $(ls /sys/class/net); do
     case "$iface" in
-        lo) continue ;;
+        lo)
+            continue
+            ;;
         eth*|wlan*|wl*)
-            echo "[net] Bringing up $iface"
+            echo "[net] bringing up $iface"
             ip link set "$iface" up
 
             for i in $(seq 1 10); do
@@ -33,7 +28,7 @@ for iface in $(ls /sys/class/net); do
                 sleep 1
             done
 
-            echo "[net] Starting DHCP for $iface"
+            echo "[net] requesting DHCP on $iface"
             udhcpc -i "$iface" -q -n -b > /dev/null 2>&1
 
             ip=$(ip addr show "$iface" | awk '/inet / {print $2}')
@@ -42,4 +37,4 @@ for iface in $(ls /sys/class/net); do
     esac
 done
 
-#[ -x /usr/bin/wifi_setup.sh ] && /etc/init.d/wifi_setup.sh
+echo "[net] init done"

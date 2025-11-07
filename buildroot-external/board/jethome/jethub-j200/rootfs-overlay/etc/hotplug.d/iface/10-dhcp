@@ -1,9 +1,0 @@
-#!/bin/bash
-
-[ "$ACTION" = "add" ] || exit 0
-[ "$INTERFACE" = "lo" ] && exit 0
-
-ip addr show "$INTERFACE" | grep -q 'inet ' && exit 0
-
-logger -t net "Interface $INTERFACE added — requesting DHCP"
-udhcpc -i "$INTERFACE" -q -n -b > /dev/null 2>&1
