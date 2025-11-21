@@ -151,12 +151,12 @@ index 699b2c3c899..24df0094583 100644
 +	\
 +	"boot_script=" \
 +		"sf probe;" \
-+		"setenv bootargs_root \"root=/dev/mtdblock5 ro rootwait rootfs=erofs\"; " \
++		"setenv bootargs_root \"root=/dev/mtdblock2 ro rootwait rootfs=erofs\"; " \
 +		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8 fbcon=map:1\"; " \
-+		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64k(env),6M(kernel),64k(version),-(rootfs) mtdids=nor0=spi0.0\"; " \
++		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),6M(kernel),24M(rootfs) mtdids=nor0=spi0.0\"; " \
 +		"setenv bootargs \"${bootargs_console} ${bootargs_root} ${bootargs_mtdparts}\"; " \
 +		"echo \"Loading LZMA-compressed kernel from spi\"; " \
-+		"if sf read 0x10000000 0x00210000 0x00600000; then " \
++		"if sf read 0x10000000 0x00200000 0x00600000; then " \
 +			"echo \"Image.lzma loaded successfully.\"; " \
 +			"if lzmadec 0x10000000 ${kernel_addr_r}; then " \
 +				"echo \"LZMA decompression successful.\"; " \

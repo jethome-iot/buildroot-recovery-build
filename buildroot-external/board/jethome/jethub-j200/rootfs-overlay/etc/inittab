@@ -33,6 +33,21 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 # now run any rc scripts
 ::sysinit:/etc/init.d/rcS
 
+# Start mdev daemon for hotplug support
+::sysinit:/bin/echo /sbin/mdev > /proc/sys/kernel/hotplug
+::sysinit:/sbin/mdev -s
+null::respawn:/sbin/mdev -df
+
+# Auto-start all rescue applications simultaneously (commented for testing)
+# Console application on serial port
+#ttyAML0::respawn:/bin/sh -c 'cd /opt/jrescue-app/console-application && exec ./main.py'
+
+# OLED application on framebuffer console
+#tty1::respawn:/bin/sh -c 'cd /opt/jrescue-app/oled-grid-application && exec ./main.py'
+
+# Web application (HTTP server on port 8124, runs in background)
+#::respawn:/bin/sh -c 'cd /opt/jrescue-app/web-application && ./main.py > /tmp/web-app.log 2>&1'
+
 # Put a getty on the serial port
 ttyAML0::respawn:/sbin/getty 115200 ttyAML0 linux
 tty1::respawn:/sbin/getty 115200 tty1 linux

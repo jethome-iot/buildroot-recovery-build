@@ -12,6 +12,11 @@ BOARD_DIR=${2}
 . "${SCRIPT_DIR}/name.sh"
 . "${SCRIPT_DIR}/rauc.sh"
 
+# Source board-specific post-build script if it exists
+if [ -f "${BOARD_DIR}/post-build-j200.sh" ]; then
+    . "${BOARD_DIR}/post-build-j200.sh"
+fi
+
 # JHOS tasks
 fix_rootfs
 #install_tini_docker

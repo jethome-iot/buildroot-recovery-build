@@ -36,7 +36,7 @@ function create_disk_image() {
     rm -rf "${GENIMAGE_TMPPATH}"
 
     genimage \
-      --rootpath "$(ROOTPATH_TMP)" \
+      --rootpath "${ROOTPATH_TMP}" \
       --configdump - \
       --tmppath "$GENIMAGE_TMPPATH" \
       --outputpath "${BINARIES_DIR}" \

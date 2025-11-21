@@ -1,0 +1,21 @@
+#!/bin/sh
+# Auto-start all jrescue-app applications on boot
+
+# Wait for system to be ready (network, filesystems)
+sleep 5
+
+# Start console application in background (serial console)
+cd /opt/jrescue-app/console-application
+./main.py > /tmp/console-app.log 2>&1 &
+
+# Start OLED application in background (framebuffer console)
+cd /opt/jrescue-app/oled-grid-application
+./main.py > /tmp/oled-app.log 2>&1 &
+
+# Start web application in background (HTTP server on port 8124)
+cd /opt/jrescue-app/web-application
+./main.py > /tmp/web-app.log 2>&1 &
+
+# Keep script running (prevents init from respawning too quickly)
+# Wait for all background processes
+wait
