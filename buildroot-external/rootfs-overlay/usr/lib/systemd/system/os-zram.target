@@ -1,6 +1,0 @@
-[Unit]
-Description=JHOS zram targets
-Documentation=man:systemd.target(5)
-
-[Install]
-WantedBy=multi-user.target
