@@ -1,0 +1,54 @@
+From b3dbba1a163f28a9174718aad272388e65a1bfff Mon Sep 17 00:00:00 2001
+From: Nikita Maslo <nikitamalco203@gmail.com>
+Date: Mon, 4 Aug 2025 10:12:47 +0300
+Subject: [PATCH] Add jethub rescue mode
+
+---
+ include/configs/jethub.h | 31 +++++++++++++++++++++++++------
+ 1 file changed, 25 insertions(+), 6 deletions(-)
+
+diff --git a/include/configs/jethub.h b/include/configs/jethub.h
+index 699b2c3c899..09db4c08e00 100644
+--- a/include/configs/jethub.h
++++ b/include/configs/jethub.h
+@@ -18,12 +18,31 @@
+ 		"fi;\0"
+ #elif defined(CONFIG_MESON_G12A)
+ #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
+-	"bootcmd_rescue=" \
+-		"if gpio input aobus-banks10; then " \
+-		"run bootcmd_mmc1; " \
+-		"run bootcmd_mmc0; " \
+-		"run bootcmd_usb0;" \
+-		"fi;\0"
++	"boot_script=" \
++		"sf probe;" \
++		"setenv bootargs_root \"root=/dev/ram0 ro\"; " \
++		"setenv bootargs_console \"console=tty0 console=ttyAML0,115200n8 fbcon=map:1\"; " \
++		"setenv bootargs_mtdparts \"mtdparts=spi0.0:2M(uboot),64K(env),-(kernel) mtdids=nor0=spi0.0\"; " \
++		"setenv bootargs \"${bootargs_console} ${bootargs_root} ${bootargs_mtdparts}\"; " \
++		"echo \"Loading LZMA-compressed kernel from spi\"; " \
++		"if sf read 0x10000000 0x00210000 0x01DF0000; then " \
++			"echo \"Image.lzma loaded successfully.\"; " \
++			"if lzmadec 0x10000000 ${kernel_addr_r}; then " \
++				"echo \"LZMA decompression successful.\"; " \
++			"else " \
++				"echo \"Error: LZMA decompression failed!\"; " \
++				"reset; " \
++			"fi; " \
++		"else " \
++			"echo \"Error: Failed to load Image.lzma from SPI!\"; " \
++			"reset; " \
++		"fi; " \
++		"printenv bootargs;" \
++		"echo \"Starting kernel\"; " \
++		"fdt addr ${fdtcontroladdr}; " \
++		"booti ${kernel_addr_r} - ${fdtcontroladdr}; " \
++		"echo \"Boot failed, resetting...\"; " \
++	"reset\0"
+ #else
+ #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
+ 	"bootcmd_rescue=" \
+--
+2.43.0
+
