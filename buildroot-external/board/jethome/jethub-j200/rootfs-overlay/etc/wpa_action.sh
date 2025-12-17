@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 IFACE="$1"
 CMD="$2"

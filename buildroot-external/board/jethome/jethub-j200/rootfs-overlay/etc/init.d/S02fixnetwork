@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 [ "$1" = "stop" ] && exit 0
 
@@ -36,5 +36,17 @@ for iface in $(ls /sys/class/net); do
             ;;
     esac
 done
+
+# Time sync (BusyBox ntpd)
+if pidof ntpd >/dev/null 2>&1; then
+    echo "[net] ntpd already running"
+else
+    echo "[net] starting ntpd daemon"
+    ntpd \
+        -p 0.pool.ntp.org \
+        -p 1.pool.ntp.org \
+        -p 2.pool.ntp.org \
+        >/dev/null 2>&1
+fi
 
 echo "[net] init done"
