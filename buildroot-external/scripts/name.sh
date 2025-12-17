@@ -27,7 +27,3 @@ function os_version() {
 function path_boot_dir() {
     echo "${BINARIES_DIR}/boot"
 }
-
-function path_rootfs_img() {
-    echo "${BINARIES_DIR}/rootfs.erofs"
-}
