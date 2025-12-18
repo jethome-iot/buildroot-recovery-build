@@ -20,8 +20,24 @@ fi
 # JHOS tasks
 fix_rootfs
 
-# Write os-release
-# shellcheck disable=SC2153
+#os-release
+OS_RELEASE="${TARGET_DIR}/usr/lib/os-release"
+if [ -f "${OS_RELEASE}" ]; then
+    JRESCUE_NAME="jrescue"
+    JRESCUE_VER="1.0"
+
+    sed -i \
+        -e "s/^NAME=.*/NAME=${JRESCUE_NAME}/" \
+        -e "s/^ID=.*/ID=${JRESCUE_NAME}/" \
+        -e "s/^VERSION_ID=.*/VERSION_ID=${JRESCUE_VER}/" \
+        -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"${JRESCUE_NAME} ${JRESCUE_VER}\"/" \
+        "${OS_RELEASE}"
+
+    grep -q '^NAME=' "${OS_RELEASE}" || echo "NAME=${JRESCUE_NAME}" >> "${OS_RELEASE}"
+    grep -q '^ID=' "${OS_RELEASE}" || echo "ID=${JRESCUE_NAME}" >> "${OS_RELEASE}"
+    grep -q '^VERSION_ID=' "${OS_RELEASE}" || echo "VERSION_ID=${JRESCUE_VER}" >> "${OS_RELEASE}"
+    grep -q '^PRETTY_NAME=' "${OS_RELEASE}" || echo "PRETTY_NAME=\"${JRESCUE_NAME} ${JRESCUE_VER}\"" >> "${OS_RELEASE}"
+fi
 
 # Write machine-info
 (
