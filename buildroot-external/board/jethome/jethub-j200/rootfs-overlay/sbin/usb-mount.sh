@@ -4,20 +4,18 @@
 
 DEV="$MDEV"
 DEVPATH="/dev/$DEV"
-BASE="/tmp/usb"
+BASE="/mnt/usb"
 ACTION="${ACTION:-add}"
 
 log() { echo "[usb-mount] $*"; }
 
 find_mountpoint() {
-    # Если уже смонтировано — вернуть
     MP=$(grep "^$DEVPATH " /proc/mounts | awk '{print $2}')
     if [ -n "$MP" ]; then
         echo "$MP"
         return 0
     fi
 
-    # Иначе выбрать /tmp/usb, /tmp/usb1, /tmp/usb2...
     if [ ! -e "$BASE" ]; then
         echo "$BASE"
         return 0
@@ -30,7 +28,6 @@ find_mountpoint() {
             echo "$MP"
             return 0
         fi
-        # Если каталог есть но не смонтирован — можно использовать
         if ! grep -q " $MP " /proc/mounts; then
             echo "$MP"
             return 0

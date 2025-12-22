@@ -16,7 +16,9 @@ echo "[net] bringing up interfaces"
 for iface in $(ls /sys/class/net); do
     case "$iface" in
         lo)
-            continue
+            echo "[net] bringing up lo"
+            ip link set lo up
+            ip addr add 127.0.0.1/8 dev lo 2>/dev/null || true
             ;;
         eth*|wlan*|wl*)
             echo "[net] bringing up $iface"

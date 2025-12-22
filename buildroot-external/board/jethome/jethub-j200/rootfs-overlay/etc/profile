@@ -20,12 +20,11 @@ echo "Telegram : https://t.me/jethomeru"
 
 echo -e "${RESET}"
 
-# Auto-resize on serial console (ttyAML0)
-if [ -t 0 ] && [ -n "${PS1:-}" ]; then
-TTYDEV="$(tty 2>/dev/null || true)"
-if [ "$TTYDEV" = "/dev/ttyAML0" ] && command -v resize >/dev/null 2>&1; then
-    eval "$(resize 2>/dev/null)" || true
-fi
+# resize
+if [ "$(tty)" = "/dev/ttyAML0" ] && command -v resize >/dev/null 2>&1; then
+  timeout 2 resize
 fi
 
-
+# UTF-8 env
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
