@@ -10,7 +10,6 @@ HOOK_FILE=${3}
 . "${BOARD_DIR}/meta"
 
 . "${SCRIPT_DIR}/hdd-image.sh"
-. "${SCRIPT_DIR}/rootfs-layer.sh"
 . "${SCRIPT_DIR}/name.sh"
 . "${SCRIPT_DIR}/rauc.sh"
 . "${HOOK_FILE}"

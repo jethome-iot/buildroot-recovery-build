@@ -8,16 +8,8 @@ BOARD_DIR=${2}
 . "${BR2_EXTERNAL_JHOS_PATH}/meta"
 . "${BOARD_DIR}/meta"
 
-. "${SCRIPT_DIR}/rootfs-layer.sh"
 . "${SCRIPT_DIR}/name.sh"
 . "${SCRIPT_DIR}/rauc.sh"
-
-# Source board-specific post-build script if it exists
-if [ -f "${BOARD_DIR}/post-build-j200.sh" ]; then
-    . "${BOARD_DIR}/post-build-j200.sh"
-fi
-
-# JHOS tasks
 
 #os-release
 OS_RELEASE="${TARGET_DIR}/usr/lib/os-release"
