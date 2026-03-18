@@ -18,7 +18,6 @@ if [ -f "${BOARD_DIR}/post-build-j200.sh" ]; then
 fi
 
 # JHOS tasks
-fix_rootfs
 
 #os-release
 OS_RELEASE="${TARGET_DIR}/usr/lib/os-release"
