@@ -1,1 +1,0 @@
- console=tty0 console=ttyAML0,115200n8
