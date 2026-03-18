@@ -19,7 +19,6 @@ sudo docker build -t os-builder .
 sudo docker run --rm --privileged -v "${GITHUB_WORKSPACE}:/build" \
   -e BUILDER_UID="${BUILDER_UID}" -e BUILDER_GID="${BUILDER_GID}" \
   -v "./cache:/cache" \
-  -v "${HOME}/gitjet/linux-kernel:/kernel:ro" \
   os-builder \
   make BUILDDIR=/build $BOARD $@
 
