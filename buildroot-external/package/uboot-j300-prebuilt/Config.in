@@ -1,0 +1,7 @@
+config BR2_PACKAGE_UBOOT_J300_PREBUILT
+	bool "uboot-j300-prebuilt"
+	help
+	  Pre-built U-Boot binary for JetHub J300.
+
+	  This package installs a pre-compiled u-boot.bin
+	  instead of building U-Boot from source.
