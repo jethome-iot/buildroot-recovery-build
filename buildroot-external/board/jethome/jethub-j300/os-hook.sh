@@ -2,15 +2,17 @@
 # shellcheck disable=SC2155
 
 function os_pre_image() {
-    local BOOT_DATA="$(path_boot_dir)"
-    dd if=/dev/zero of="${BINARIES_DIR}/env.blank" bs=64K count=1
-    lzma -f -k -9 "${BINARIES_DIR}/Image"
+    cp "${BOARD_DIR}/rescue.its" "${BINARIES_DIR}/"
 
-    mkdir -p "${BOOT_DATA}/amlogic"
-    cp "${BINARIES_DIR}/meson-s7d-jethub-j300.dtb" "${BOOT_DATA}/amlogic/"
-    if ls "${BINARIES_DIR}"/*.dtbo 1> /dev/null 2>&1; then
-        echo "Found .dtbo files in ${BINARIES_DIR}"
-        mkdir -p "${BOOT_DATA}/overlays"
-        cp "${BINARIES_DIR}"/*.dtbo "${BOOT_DATA}/overlays/"
+    echo "Building recovery FIT image..."
+    (cd "${BINARIES_DIR}" && mkimage -f rescue.its recovery.fit)
+
+    local fit_size=$(stat -c %s "${BINARIES_DIR}/recovery.fit")
+    local max_size=$((100 * 1024 * 1024))
+    echo "recovery.fit size: $((fit_size / 1024 / 1024)) MiB"
+
+    if [ "${fit_size}" -gt "${max_size}" ]; then
+        echo "ERROR: recovery.fit exceeds 100 MiB slot limit (${fit_size} bytes)"
+        exit 1
     fi
 }

@@ -1,24 +1,24 @@
 #!/bin/bash
-
-CURPWD="$(pwd)"
-GITHUB_WORKSPACE="$(realpath ${CURPWD})"
+set -e
 
 BUILDER_UID="$(id -u)"
 BUILDER_GID="$(id -g)"
+CACHE_DIR="${CACHE_DIR:-./cache}"
+BOARD="${1:-jethub_j300}"
+shift 2>/dev/null || true
 
-BOARD="$1"
-shift
+mkdir -p "${CACHE_DIR}"
 
-if [[ -z "$BOARD" ]]; then
-  BOARD=jethub_j300
+if [ ! -f buildroot/Makefile ]; then
+  git submodule update --init
 fi
 
-sudo docker build -t os-builder .
+docker build -t jrescue-builder .
 
-
-sudo docker run --rm --privileged -v "${GITHUB_WORKSPACE}:/build" \
-  -e BUILDER_UID="${BUILDER_UID}" -e BUILDER_GID="${BUILDER_GID}" \
-  -v "./cache:/cache" \
-  os-builder \
-  make BUILDDIR=/build $BOARD $@
-
+docker run --rm -it \
+  -v "$(pwd):/build" \
+  -v "$(realpath "${CACHE_DIR}"):/cache" \
+  -e BUILDER_UID="${BUILDER_UID}" \
+  -e BUILDER_GID="${BUILDER_GID}" \
+  jrescue-builder \
+  make BUILDDIR=/build "${BOARD}" "$@"
