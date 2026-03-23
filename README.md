@@ -1,61 +1,41 @@
-# Home Assistant Operating System
+# JetHub J300 Recovery System
 
-Home Assistant Operating System (formerly HassOS) is a Linux based operating system optimized to host [Home Assistant](https://www.home-assistant.io) and its [Add-ons](https://www.home-assistant.io/addons/).
+Buildroot-based recovery system for [JetHome JetHub J300](Amlogic S905x5m / S7D). Produces a single `recovery.fit` FIT image containing Linux kernel, DTB, and initramfs.
 
-Home Assistant Operating System uses Docker as its container engine. By default it deploys the Home Assistant Supervisor as a container. Home Assistant Supervisor in turn uses the Docker container engine to control Home Assistant Core and Add-Ons in separate containers. Home Assistant Operating System is **not** based on a regular Linux distribution like Ubuntu. It is built using [Buildroot](https://buildroot.org/) and it is optimized to run Home Assistant. It targets single board compute (SBC) devices like the Raspberry Pi or ODROID but also supports x86-64 systems with UEFI.
+## Overview
 
-[![Home Assistant - A project from the Open Home Foundation](https://www.openhomefoundation.org/badges/home-assistant.png)](https://www.openhomefoundation.org/)
+The recovery system provides a minimal Linux environment with the `jrescue-app` application for:
 
-## Features
+- Network configuration
+- Firmware download over the network
+- Flashing firmware images to eMMC
+- OLED display
+- Web interface for remote management
+- Console interface
 
-- Lightweight and memory-efficient
-- Minimized I/O
-- Over The Air (OTA) updates
-- Offline updates
-- Modular using Docker container engine
+## Build Output
 
-## Supported hardware
+The build produces `output/images/recovery.fit` — a U-Boot FIT image containing:
 
-- Nabu Casa
-- Raspberry Pi
-- Hardkernel ODROID
-- Asus Tinker Board
-- Generic x86-64 (e.g. Intel NUC)
-- Virtual appliances
+| Component | Description |
+|-----------|-------------|
+| `Image` | Linux 5.15 kernel (aarch64) |
+| `meson-s7d-jethub-j300.dtb` | Device tree blob |
+| `rootfs.cpio.lzma` | LZMA-compressed initramfs |
 
-See the full list and specific models [here](./Documentation/boards/README.md)
+The FIT image must fit within the 100 MiB eMMC recovery slot.
 
-## Getting Started
+## eMMC Layout
 
-If you just want to use Home Assistant the official [getting started guide](https://www.home-assistant.io/getting-started/) and [installation instructions](https://www.home-assistant.io/hassio/installation/) take you through how to download Home Assistant Operating System and get it running on your machine.
+The recovery system occupies raw (unpartitioned) eMMC space before the Armbian rootfs:
 
-If you're interested in finding out more about Home Assistant Operating System and how it works read on...
+```
+| Offset      | Size    | Content                       |
+|-------------|---------|-------------------------------|
+| 0–4 MiB     | 4 MiB   | U-Boot bootloader             |
+| 4–104 MiB   | 100 MiB | Recovery slot A (recovery.fit) |
+| 104–204 MiB | 100 MiB | Recovery slot B (recovery.fit) |
+| 204+ MiB    |         | Armbian rootfs partition      |
+```
 
-## Development
-
-If you don't have experience with embedded systems, Buildroot or the build process for Linux distributions it is recommended to read up on these topics first (e.g. [Bootlin](https://bootlin.com/docs/) has excellent resources).
-
-The Home Assistant Operating System documentation can be found on the [Home Assistant Developer Docs website](https://developers.home-assistant.io/docs/operating-system).
-
-### Components
-
-- **Bootloader:**
-  - [GRUB](https://www.gnu.org/software/grub/) for devices that support UEFI
-  - [U-Boot](https://www.denx.de/wiki/U-Boot) for devices that don't support UEFI
-- **Operating System:**
-  - [Buildroot](https://buildroot.org/) LTS Linux
-- **File Systems:**
-  - [SquashFS](https://www.kernel.org/doc/Documentation/filesystems/squashfs.txt) for read-only file systems (using LZ4 compression)
-  - [ZRAM](https://www.kernel.org/doc/Documentation/blockdev/zram.txt) for `/tmp`, `/var` and swap (using LZ4 compression)
-- **Container Platform:**
-  - [Docker Engine](https://docs.docker.com/engine/) for running Home Assistant components in containers
-- **Updates:**
-  - [RAUC](https://rauc.io/) for Over The Air (OTA) and USB updates
-- **Security:**
-  - [AppArmor](https://apparmor.net/) Linux kernel security module
-
-### Development builds
-
-The Development build GitHub Action Workflow is a manually triggered workflow
-which creates Home Assistant OS development builds. The development builds are
-available at [https://os-artifacts.home-assistant.io/index.html](https://os-artifacts.home-assistant.io/index.html).
+U-Boot detects the hardware recovery trigger (GPIO button) and loads `recovery.fit` from the active slot via `bootm`.
