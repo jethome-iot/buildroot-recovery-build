@@ -38,21 +38,11 @@ fi
 
 install_bootloader_config
 
-# Copy DTB from Amlogic kernel (built in common_drivers/)
-if [ -z "${BUILD_DIR}" ]; then
-    BUILD_DIR="$(dirname "${BINARIES_DIR}")/build"
-fi
-LINUX_BUILD_DIR="${BUILD_DIR}/linux-custom"
-DTB_NAME="meson-s7d-jethub-j300.dtb"
+DTB_SRC="${BASE_DIR}/build/linux-linux-s7d-5.15/common_drivers/arch/arm64/boot/dts/amlogic/meson-s7d-jethub-j300.dtb"
 
-# DTB is in common_drivers/arch/arm64/boot/dts/amlogic/
-DTB_SRC="${LINUX_BUILD_DIR}/common_drivers/arch/arm64/boot/dts/amlogic/${DTB_NAME}"
-
-if [ -f "${DTB_SRC}" ]; then
-    echo "Copying DTB from ${DTB_SRC}"
-    cp "${DTB_SRC}" "${BINARIES_DIR}/"
-else
+if [ ! -f "${DTB_SRC}" ]; then
     echo "ERROR: DTB not found at ${DTB_SRC}"
     exit 1
 fi
+cp "${DTB_SRC}" "${BINARIES_DIR}/"
 
