@@ -1,0 +1,32 @@
+#!/bin/sh
+# RAUC custom bootloader backend for recovery A/B slots
+# Manages recovery_slot U-boot environment variable via fw_setenv/fw_printenv
+
+set -e
+
+COMMAND="$1"
+SLOT="$2"
+VALUE="$3"
+
+get_current_slot() {
+    slot=$(fw_printenv -n recovery_slot 2>/dev/null || echo "A")
+    echo "$slot"
+}
+
+case "$COMMAND" in
+    get-primary)
+        get_current_slot
+        ;;
+    set-primary)
+        fw_setenv recovery_slot "$SLOT"
+        ;;
+    get-state)
+        echo "good"
+        ;;
+    set-state)
+        ;;
+    *)
+        echo "Unknown command: $COMMAND" >&2
+        exit 1
+        ;;
+esac
