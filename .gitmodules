@@ -1,4 +1,3 @@
 [submodule "buildroot"]
     path = buildroot
-    url = https://github.com/jethome-iot/buildroot.git
-    branch = 2025.05.x-jethome
+	url = https://github.com/buildroot/buildroot.git
