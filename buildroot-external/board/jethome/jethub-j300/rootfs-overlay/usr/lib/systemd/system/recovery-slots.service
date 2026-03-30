@@ -1,19 +1,16 @@
 [Unit]
 Description=Create loop devices for recovery A/B raw slots
 DefaultDependencies=no
-Before=rauc.service
 After=dev-mmcblk1.device
 Requires=dev-mmcblk1.device
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-# Slot A: 4 MiB offset, 100 MiB size
-ExecStart=/sbin/losetup /dev/loop-recovery-a /dev/mmcblk1 --offset 4194304 --sizelimit 104857600
-# Slot B: 104 MiB offset, 100 MiB size
-ExecStart=/sbin/losetup /dev/loop-recovery-b /dev/mmcblk1 --offset 109051904 --sizelimit 104857600
-ExecStop=/sbin/losetup -d /dev/loop-recovery-a
-ExecStop=/sbin/losetup -d /dev/loop-recovery-b
+ExecStart=/usr/sbin/losetup -o 4194304 --sizelimit 104857600 /dev/loop0 /dev/mmcblk1
+ExecStart=/usr/sbin/losetup -o 109051904 --sizelimit 104857600 /dev/loop1 /dev/mmcblk1
+ExecStop=/usr/sbin/losetup -d /dev/loop0
+ExecStop=/usr/sbin/losetup -d /dev/loop1
 
 [Install]
 WantedBy=multi-user.target

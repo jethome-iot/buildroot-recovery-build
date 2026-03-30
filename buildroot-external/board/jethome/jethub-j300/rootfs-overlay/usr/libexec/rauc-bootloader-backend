@@ -14,7 +14,7 @@ get_current_slot() {
 }
 
 case "$COMMAND" in
-    get-primary)
+    get-primary|get-current)
         get_current_slot
         ;;
     set-primary)
