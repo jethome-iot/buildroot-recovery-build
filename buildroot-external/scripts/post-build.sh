@@ -38,10 +38,15 @@ fi
 
 install_bootloader_config
 
-DTB_SRC="${BASE_DIR}/build/linux-linux-s7d-5.15/common_drivers/arch/arm64/boot/dts/amlogic/meson-s7d-jethub-j300.dtb"
+if [ -z "${KERNEL_DTB}" ]; then
+    echo "ERROR: KERNEL_DTB not set in ${BOARD_DIR}/meta"
+    exit 1
+fi
 
-if [ ! -f "${DTB_SRC}" ]; then
-    echo "ERROR: DTB not found at ${DTB_SRC}"
+DTB_SRC="$(find "${BASE_DIR}/build" -path "*/common_drivers/arch/arm64/boot/dts/amlogic/${KERNEL_DTB}" -print -quit)"
+
+if [ -z "${DTB_SRC}" ] || [ ! -f "${DTB_SRC}" ]; then
+    echo "ERROR: ${KERNEL_DTB} not found under ${BASE_DIR}/build/"
     exit 1
 fi
 cp "${DTB_SRC}" "${BINARIES_DIR}/"

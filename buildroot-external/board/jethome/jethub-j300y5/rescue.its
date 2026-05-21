@@ -1,0 +1,49 @@
+/dts-v1/;
+
+/ {
+	description = "JetHub J300Y5 recovery image";
+	#address-cells = <1>;
+
+	images {
+		kernel {
+			description = "Linux kernel";
+			data = /incbin/("Image");
+			type = "kernel";
+			arch = "arm64";
+			os = "linux";
+			compression = "none";
+			load = <0x14000000>;
+			entry = <0x14000000>;
+		};
+
+		fdt {
+			description = "Device tree";
+			data = /incbin/("meson-s7-jethub-j300y5.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x10800000>;
+		};
+
+		ramdisk {
+			description = "Root filesystem";
+			data = /incbin/("rootfs.cpio.lzma");
+			type = "ramdisk";
+			arch = "arm64";
+			os = "linux";
+			compression = "lzma";
+			load = <0x1A000000>;
+		};
+	};
+
+	configurations {
+		default = "recovery";
+
+		recovery {
+			description = "Recovery system";
+			kernel = "kernel";
+			fdt = "fdt";
+			ramdisk = "ramdisk";
+		};
+	};
+};

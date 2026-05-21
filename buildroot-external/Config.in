@@ -1,2 +1,2 @@
-source "$BR2_EXTERNAL_JHOS_PATH/package/jrescue-app/Config.in"
 source "$BR2_EXTERNAL_JHOS_PATH/package/uboot-j300-prebuilt/Config.in"
+source "$BR2_EXTERNAL_JHOS_PATH/package/uboot-j300y5-prebuilt/Config.in"
