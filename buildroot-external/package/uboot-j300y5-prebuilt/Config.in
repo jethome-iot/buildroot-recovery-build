@@ -1,7 +1,0 @@
-config BR2_PACKAGE_UBOOT_J300Y5_PREBUILT
-	bool "uboot-j300y5-prebuilt"
-	help
-	  Pre-built U-Boot binary for JetHub J300Y5 (Amlogic S905Y5 / S7).
-
-	  This package installs a pre-compiled u-boot.bin
-	  instead of building U-Boot from source.

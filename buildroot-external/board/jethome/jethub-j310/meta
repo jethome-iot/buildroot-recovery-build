@@ -1,0 +1,7 @@
+BOARD_ID=jethub-j310
+BOARD_NAME="JetHome JetHub J310"
+CHASSIS=embedded
+BOOTLOADER=uboot
+KERNEL_FILE=Image
+KERNEL_DTB=meson-s7-jethub-j310.dtb
+BOOT_ENV_SIZE=0x10000

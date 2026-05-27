@@ -1,7 +1,7 @@
 /dts-v1/;
 
 / {
-	description = "JetHub J300Y5 recovery image";
+	description = "JetHub j310 recovery image";
 	#address-cells = <1>;
 
 	images {
@@ -18,7 +18,7 @@
 
 		fdt {
 			description = "Device tree";
-			data = /incbin/("meson-s7-jethub-j300y5.dtb");
+			data = /incbin/("meson-s7-jethub-j310.dtb");
 			type = "flat_dt";
 			arch = "arm64";
 			compression = "none";
