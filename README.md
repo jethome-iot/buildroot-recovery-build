@@ -1,6 +1,6 @@
-# JetHub J300 Recovery System
+# JetHub J310 Recovery System
 
-Buildroot-based recovery system for [JetHome JetHub J300](Amlogic S905x5m / S7D). Produces a single `recovery.fit` FIT image containing Linux kernel, DTB, and initramfs.
+Buildroot-based recovery system for [JetHome JetHub J310](Amlogic S905y5). Produces a single `recovery.fit` FIT image containing Linux kernel, DTB, and initramfs.
 
 ## Overview
 
@@ -20,7 +20,7 @@ The build produces `output/images/recovery.fit` — a U-Boot FIT image containin
 | Component | Description |
 |-----------|-------------|
 | `Image` | Linux 5.15 kernel (aarch64) |
-| `meson-s7d-jethub-j300.dtb` | Device tree blob |
+| `meson-s7d-jethub-j310.dtb` | Device tree blob |
 | `rootfs.cpio.lzma` | LZMA-compressed initramfs |
 
 The FIT image must fit within the 100 MiB eMMC recovery slot.
