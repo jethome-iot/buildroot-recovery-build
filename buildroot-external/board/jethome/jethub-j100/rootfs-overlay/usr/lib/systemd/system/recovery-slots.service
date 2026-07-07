@@ -7,8 +7,9 @@ Requires=dev-mmcblk1.device
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-# Slot A at 132 MiB, slot B at 234 MiB, 102 MiB each — must match
-# recovery_slot_a_start/recovery_slot_b_start in u-boot jethub_j310.h
+# Slot A at 132 MiB, slot B at 234 MiB, 102 MiB each (same layout as j310).
+# eMMC is mmcblk1 on mainline: block index follows the mmc host index and
+# host 0 is the SDIO wifi controller
 ExecStart=/usr/sbin/losetup -o 138412032 --sizelimit 106954752 /dev/loop0 /dev/mmcblk1
 ExecStart=/usr/sbin/losetup -o 245366784 --sizelimit 106954752 /dev/loop1 /dev/mmcblk1
 ExecStop=/usr/sbin/losetup -d /dev/loop0

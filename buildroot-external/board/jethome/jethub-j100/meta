@@ -1,9 +1,9 @@
-BOARD_ID=jethub-j310
-BOARD_NAME="JetHome JetHub J310"
+BOARD_ID=jethub-j100
+BOARD_NAME="JetHome JetHub J100"
 CHASSIS=embedded
 BOOTLOADER=uboot
 KERNEL_FILE=Image
-KERNEL_DTB=meson-s7-jethub-j310.dtb
+KERNEL_DTB=meson-axg-jethome-jethub-j100.dtb
 BOOT_ENV_DEV=/dev/mmcblk1
 BOOT_ENV_OFFSET=0x380000
 BOOT_ENV_SIZE=0x10000

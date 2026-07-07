@@ -34,20 +34,46 @@ fi
 (
     echo "CHASSIS=${CHASSIS}"
     echo "DEPLOYMENT=${DEPLOYMENT}"
+    echo "HARDWARE_VENDOR=\"JetHome\""
+    echo "HARDWARE_MODEL=\"${BOARD_NAME}\""
+    echo "BOARD_ID=${BOARD_ID}"
 ) > "${TARGET_DIR}/etc/machine-info"
 
+# Export board identity into login-shell environment
+mkdir -p "${TARGET_DIR}/etc/profile.d"
+(
+    echo "export BOARD=${BOARD_ID}"
+    echo "export BOARD_NAME=\"${BOARD_NAME}\""
+) > "${TARGET_DIR}/etc/profile.d/board.sh"
+
 install_bootloader_config
+
+# J100 recovery is module-free by design: every needed driver is built in via
+# the kernel-recovery.config fragment, and the huge =m tail of the shared
+# mainline config must not end up in the initramfs.
+if [ "${BOARD_ID}" = "jethub-j100" ] && [ -d "${TARGET_DIR}/lib/modules" ]; then
+    echo "Removing kernel modules (module-free recovery initramfs)"
+    rm -rf "${TARGET_DIR}/lib/modules"
+fi
 
 if [ -z "${KERNEL_DTB}" ]; then
     echo "ERROR: KERNEL_DTB not set in ${BOARD_DIR}/meta"
     exit 1
 fi
 
+# Vendor kernel (J310) keeps its DTB under common_drivers in the build tree
+# and buildroot never installs it, so a fresh copy there always wins over a
+# possibly stale file in BINARIES_DIR left by a previous build.
 DTB_SRC="$(find "${BASE_DIR}/build" -path "*/common_drivers/arch/arm64/boot/dts/amlogic/${KERNEL_DTB}" -print -quit)"
 
-if [ -z "${DTB_SRC}" ] || [ ! -f "${DTB_SRC}" ]; then
-    echo "ERROR: ${KERNEL_DTB} not found under ${BASE_DIR}/build/"
+if [ -n "${DTB_SRC}" ] && [ -f "${DTB_SRC}" ]; then
+    cp "${DTB_SRC}" "${BINARIES_DIR}/"
+elif [ -f "${BINARIES_DIR}/${KERNEL_DTB}" ]; then
+    # Mainline kernel (J100): linux.mk reinstalls the in-tree DTB into
+    # BINARIES_DIR on every kernel install
+    echo "Using ${KERNEL_DTB} installed in ${BINARIES_DIR}"
+else
+    echo "ERROR: ${KERNEL_DTB} not found in ${BINARIES_DIR} or under ${BASE_DIR}/build/"
     exit 1
 fi
-cp "${DTB_SRC}" "${BINARIES_DIR}/"
 

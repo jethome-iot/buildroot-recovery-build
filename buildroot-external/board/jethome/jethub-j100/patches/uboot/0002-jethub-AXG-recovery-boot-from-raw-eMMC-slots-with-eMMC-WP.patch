@@ -1,0 +1,82 @@
+From: Nikita Maslo <nikitamalco203@gmail.com>
+Date: Mon, 6 Jul 2026 15:50:00 +0300
+Subject: [PATCH] jethub: AXG: boot recovery FIT from raw eMMC slots, arm eMMC WP on normal boot
+
+Replace the legacy AXG rescue target (SD/USB boot on button press) with the
+JetHub recovery flow: front button (periphs-banks10, active-low) pressed ->
+light the recovery LED (periphs-banks26, active-low) and load recovery.fit
+from raw eMMC slot A/B (132/234 MiB, selected by the 'recovery_slot' env var
+persisted by RAUC) via bootm; button released -> turn the recovery LED off,
+arm power-on write protect over 0-336 MiB (u-boot + vendor areas + both
+recovery slots) and continue normal distro boot.
+
+---
+diff --git a/include/configs/jethub.h b/include/configs/jethub.h
+index 2c44bfc853e..e2d9b6f0c13 100644
+--- a/include/configs/jethub.h
++++ b/include/configs/jethub.h
+@@ -9,11 +9,62 @@
+ #define __JETHUB_CONFIG_H
+ 
+ #if defined(CONFIG_MESON_AXG)
++/*
++ * JetHub D1 (j100) recovery boot.
++ *
++ * Front button is periphs-banks10 (GPIOZ_10), active-low: "gpio input"
++ * returns the pin value as exit status, so the "if" branch is taken when
++ * the button is pressed (0) and the "else" branch when it is released (1)
++ * or the GPIO lookup fails.
++ *
++ * eMMC layout (same as J310):
++ *   0-4 MiB     u-boot (env at 0x380000, 64 KiB)
++ *   4-132 MiB   Amlogic vendor areas (reserved/keys, env, gaps)
++ *   132-234 MiB recovery slot A   (sectors 0x42000 + 0x33000)
++ *   234-336 MiB recovery slot B   (sectors 0x75000 + 0x33000)
++ *   336+ MiB    main OS partition
++ *
++ * Button pressed  -> light the recovery LED (periphs-banks26 / GPIOA_0,
++ *                    active-low: "gpio clear" turns it on) to signal that
++ *                    the button was registered, then read recovery.fit
++ *                    from the slot selected by ${recovery_slot} (persisted
++ *                    by RAUC via fw_setenv) and boot it. Write-protect is
++ *                    NOT armed so that the recovery system can update its
++ *                    own slots and u-boot.
++ * Button released -> arm power-on write-protect over 0-336 MiB
++ *                    (blocks 0x0..0xA8000) so the main OS cannot damage
++ *                    u-boot or the recovery slots, then continue the
++ *                    normal distro boot flow. The protection clears on a
++ *                    full power cycle only (survives warm reboot), hence
++ *                    recovery self-update requires cold-boot entry.
++ */
+ #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
++	"recovery_slot=A\0" \
++	"recovery_fit_addr=0x08000000\0" \
++	"recovery_slot_a_start=0x42000\0" \
++	"recovery_slot_b_start=0x75000\0" \
++	"recovery_slot_sectors=0x33000\0" \
++	"emmc_protect=" \
++		"if mmc dev 1; then " \
++		"mmc wp user set 0x0 0xA8000; " \
++		"fi;\0" \
++	"boot_recovery=" \
++		"echo Recovery button pressed, booting slot ${recovery_slot}; " \
++		"gpio clear periphs-banks26; " \
++		"if test \"${recovery_slot}\" = \"B\"; then " \
++		"setenv recovery_start ${recovery_slot_b_start}; " \
++		"else " \
++		"setenv recovery_start ${recovery_slot_a_start}; " \
++		"fi; " \
++		"mmc dev 1; " \
++		"mmc read ${recovery_fit_addr} ${recovery_start} ${recovery_slot_sectors}; " \
++		"bootm ${recovery_fit_addr}#recovery;\0" \
+ 	"bootcmd_rescue=" \
+ 		"if gpio input periphs-banks10; then " \
+-		"run bootcmd_mmc0; " \
+-		"run bootcmd_usb0;" \
++		"run boot_recovery; " \
++		"else " \
++		"gpio set periphs-banks26; " \
++		"run emmc_protect; " \
+ 		"fi;\0"
+ #else
+ #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \

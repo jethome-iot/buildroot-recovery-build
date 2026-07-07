@@ -1,0 +1,125 @@
+From: Nikita Maslo <nikitamalco203@gmail.com>
+Date: Tue, 7 Jul 2026 11:40:00 +0300
+Subject: [PATCH] jethub-j100: fix up eMMC MBR after burn flashing
+
+The burn-time vendor BL33 writes an MBR whose first partition points at
+the AML rootfs base (132 MiB, verified on hardware), while the burn image
+actually carries the recovery slots there and the ext4 rootfs at 336 MiB.
+The vendor J310 u-boot solves this by rewriting the MBR on every boot
+(CONFIG_MBR_ROOTFS_OFFSET_EXTRA); mainline has no such mechanism.
+
+Fix the partition entry from misc_init_r (before eMMC write-protect is
+armed): rewrite it to a single Linux partition at 336 MiB when the MBR is
+missing/empty or points at the known burn value of 132 MiB. A directly
+written disk image (already 336 MiB) and unrecognized custom layouts are
+left untouched. The boot code area of sector 0 is preserved.
+
+---
+diff --git a/board/amlogic/jethub-j100/jethub-j100.c b/board/amlogic/jethub-j100/jethub-j100.c
+index 79732864d03..ae426ccb684 100644
+--- a/board/amlogic/jethub-j100/jethub-j100.c
++++ b/board/amlogic/jethub-j100/jethub-j100.c
+@@ -4,17 +4,95 @@
+  * Author: Vyacheslav Bocharov <adeep@lexina.in>
+  */
+ 
++#include <blk.h>
+ #include <dm.h>
+ #include <env.h>
+ #include <init.h>
++#include <memalign.h>
++#include <mmc.h>
+ #include <net.h>
++#include <stdio.h>
+ #include <asm/io.h>
+ #include <asm/arch/axg.h>
+ #include <asm/arch/sm.h>
+ #include <asm/arch/eth.h>
+ #include <asm/arch/mem.h>
++#include <linux/string.h>
+ #include <u-boot/crc.h>
+ 
++#define JETHUB_MBR_PART		0x1be
++#define JETHUB_MBR_ROOTFS_START	688128	/* 336 MiB: u-boot + vendor areas + 2x102 MiB recovery slots */
++#define JETHUB_MBR_BURN_START	270336	/* 132 MiB: rootfs offset written by the burn-time vendor BL33 */
++
++static u32 mbr_get_le32(const u8 *p)
++{
++	return p[0] | p[1] << 8 | p[2] << 16 | (u32)p[3] << 24;
++}
++
++static void mbr_put_le32(u8 *p, u32 v)
++{
++	p[0] = v;
++	p[1] = v >> 8;
++	p[2] = v >> 16;
++	p[3] = v >> 24;
++}
++
++/*
++ * The burn-time vendor BL33 writes an MBR with the rootfs partition at
++ * 132 MiB, while the burn image actually carries the recovery slots there
++ * and the ext4 rootfs at 336 MiB. Mirror what the vendor J310 u-boot does
++ * with CONFIG_MBR_ROOTFS_OFFSET_EXTRA: fix the partition entry on boot,
++ * before eMMC write-protect is armed. A directly written disk image
++ * already points at 336 MiB and is left untouched, as is any layout this
++ * code does not recognize.
++ */
++static void jethub_fix_mbr(void)
++{
++	ALLOC_CACHE_ALIGN_BUFFER(u8, mbr, MMC_MAX_BLOCK_LEN);
++	u8 *part = &mbr[JETHUB_MBR_PART];
++	struct blk_desc *desc;
++	struct mmc *mmc;
++	bool valid;
++	u32 start;
++
++	mmc = find_mmc_device(1);
++	if (!mmc || mmc_init(mmc))
++		return;
++
++	desc = mmc_get_blk_desc(mmc);
++	if (!desc || desc->lba <= JETHUB_MBR_ROOTFS_START)
++		return;
++
++	if (blk_dread(desc, 0, 1, mbr) != 1)
++		return;
++
++	valid = mbr[510] == 0x55 && mbr[511] == 0xaa;
++	start = mbr_get_le32(&part[8]);
++
++	if (valid && start == JETHUB_MBR_ROOTFS_START)
++		return;
++
++	if (valid && part[4] && start != JETHUB_MBR_BURN_START) {
++		printf("MBR: unexpected partition 1 at sector %u, leaving as is\n",
++		       start);
++		return;
++	}
++
++	/* Single Linux partition at 336 MiB; keep the boot code area */
++	memset(part, 0, 4 * 16);
++	part[4] = 0x83;
++	mbr_put_le32(&part[8], JETHUB_MBR_ROOTFS_START);
++	mbr_put_le32(&part[12], (u32)(desc->lba - JETHUB_MBR_ROOTFS_START));
++	mbr[510] = 0x55;
++	mbr[511] = 0xaa;
++
++	if (blk_dwrite(desc, 0, 1, mbr) == 1)
++		printf("MBR: rootfs partition set to sector %u\n",
++		       JETHUB_MBR_ROOTFS_START);
++	else
++		printf("MBR: fixup write failed\n");
++}
++
+ int misc_init_r(void)
+ {
+ 	u8 mac_addr[ARP_HLEN + 1];
+@@ -35,5 +113,7 @@ int misc_init_r(void)
+ 		eth_env_set_enetaddr("ethaddr", mac_addr);
+ 	}
+ 
++	jethub_fix_mbr();
++
+ 	return 0;
+ }

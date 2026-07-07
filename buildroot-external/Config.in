@@ -1,0 +1,2 @@
+source "$BR2_EXTERNAL_JHOS_PATH/package/jrescue-app/Config.in"
+source "$BR2_EXTERNAL_JHOS_PATH/package/amlogic-boot-fip-e/Config.in"

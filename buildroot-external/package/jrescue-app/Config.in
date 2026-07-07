@@ -1,0 +1,10 @@
+config BR2_PACKAGE_JRESCUE_APP
+	bool "jrescue-app"
+	depends on BR2_PACKAGE_PYTHON3
+	select BR2_PACKAGE_PYTHON_PILLOW
+	select BR2_PACKAGE_PYTHON_EVDEV
+	help
+	  JetHome rescue application: console, OLED, and web
+	  interfaces for eMMC firmware flashing on JetHub devices.
+
+	  https://github.com/jethome-iot/jrescue-app

@@ -1,6 +1,7 @@
 function install_bootloader_config() {
     if [ "${BOOTLOADER}" == "uboot" ]; then
-        # eMMC user area, offset 3.5 MiB (0x380000), size 64 KiB
-        echo "/dev/mmcblk0 0x380000 0x10000" > "${TARGET_DIR}/etc/fw_env.config"
+        # U-Boot environment on raw eMMC; location comes from ${BOARD_DIR}/meta
+        # (BOOT_ENV_DEV / BOOT_ENV_OFFSET / BOOT_ENV_SIZE)
+        echo "${BOOT_ENV_DEV} ${BOOT_ENV_OFFSET} ${BOOT_ENV_SIZE}" > "${TARGET_DIR}/etc/fw_env.config"
     fi
 }

@@ -4,6 +4,7 @@
 # Build output dirs
 /release
 output*/
+/cache/
 
 # Certificates
 *.pem
