@@ -48,9 +48,6 @@ mkdir -p "${TARGET_DIR}/etc/profile.d"
 
 install_bootloader_config
 
-# J100 recovery is module-free by design: every needed driver is built in via
-# the kernel-recovery.config fragment, and the huge =m tail of the shared
-# mainline config must not end up in the initramfs.
 if [ "${BOARD_ID}" = "jethub-j100" ] && [ -d "${TARGET_DIR}/lib/modules" ]; then
     echo "Removing kernel modules (module-free recovery initramfs)"
     rm -rf "${TARGET_DIR}/lib/modules"
