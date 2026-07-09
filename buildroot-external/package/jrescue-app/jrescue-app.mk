@@ -4,10 +4,7 @@
 #
 ################################################################################
 
-# Versioned release asset published by jrescue-app's .github/workflows/release.yml
-# (tag vX.Y.Z -> https://github.com/jethome-iot/jrescue-app/releases). Bump this to
-# the app version you want in the image.
-JRESCUE_APP_VERSION = 1.3.1
+JRESCUE_APP_VERSION = 1.3.2
 JRESCUE_APP_SITE = https://github.com/jethome-iot/jrescue-app/releases/download/v$(JRESCUE_APP_VERSION)
 JRESCUE_APP_SOURCE = jrescue-app-$(JRESCUE_APP_VERSION).tar.gz
 JRESCUE_APP_LICENSE = Proprietary

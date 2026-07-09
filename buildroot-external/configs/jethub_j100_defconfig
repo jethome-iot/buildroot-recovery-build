@@ -79,26 +79,14 @@ BR2_PACKAGE_AMLOGIC_BOOT_FIP_E_BOARD="jethub-j100"
 BR2_aarch64=y
 # BR2_PACKAGE_LINUX_PAM is not set
 BR2_PACKAGE_LIBXCRYPT=y
-BR2_PACKAGE_PYTHON3=y
 BR2_PER_PACKAGE_DIRECTORIES=y
 BR2_GNU_MIRROR="https://mirror.truenetwork.ru/gnu/"
-BR2_PACKAGE_PYTHON_PILLOW=y
-BR2_PACKAGE_FREETYPE=y
-BR2_PACKAGE_DEJAVU=y
-BR2_PACKAGE_PYTHON_EVDEV=y
-BR2_PACKAGE_OPENSSL=y
-BR2_PACKAGE_PYTHON3_XZ=y
-BR2_PACKAGE_PYTHON3_ZLIB=y
-BR2_PACKAGE_PV=y
 BR2_PACKAGE_UTIL_LINUX=y
 BR2_PACKAGE_UTIL_LINUX_BINARIES=y
 BR2_PACKAGE_UTIL_LINUX_LOSETUP=y
+# jrescue-app selects its own runtime deps (python3+curses/ssl/xz/zlib,
+# Pillow+freetype+dejavu, evdev, ncurses, pv) via package/jrescue-app/Config.in
 BR2_PACKAGE_JRESCUE_APP=y
-BR2_PACKAGE_PYTHON3_SSL=y
-# Python curses module (_curses) — required for the arrow-key TUI in the console
-# app; without it `import curses` fails and the app falls back to a numbered menu.
-BR2_PACKAGE_PYTHON3_CURSES=y
-BR2_PACKAGE_NCURSES=y
 BR2_ENABLE_LOCALE=y
 BR2_GENERATE_LOCALE="C.UTF-8 ru_RU.UTF-8"
-BR2_PACKAGE_NCURSES_WCHAR=y
+
