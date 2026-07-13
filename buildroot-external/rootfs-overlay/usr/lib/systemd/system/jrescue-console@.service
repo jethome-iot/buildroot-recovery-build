@@ -4,9 +4,7 @@ After=systemd-user-sessions.service recovery-slots.service
 Conflicts=serial-getty@%i.service
 
 [Service]
-# Detect the real terminal window size over the serial line before the UI
-# starts (the tty otherwise stays at the kernel default 80x24), then wipe
-# the boot messages off the screen
+ExecStartPre=-/bin/sh -c 'echo 1 > /proc/sys/kernel/printk'
 ExecStartPre=-/usr/bin/tty-resize
 ExecStartPre=-/usr/bin/clear
 ExecStart=/usr/bin/python3 /usr/lib/jrescue-app/console-application/main.py
