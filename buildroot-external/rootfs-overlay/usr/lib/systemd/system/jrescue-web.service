@@ -1,0 +1,13 @@
+[Unit]
+Description=JetHub rescue web interface (port 8124)
+After=recovery-slots.service
+Wants=recovery-slots.service
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/jrescue-app/web-application/main.py
+EnvironmentFile=-/etc/machine-info
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

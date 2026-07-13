@@ -1,0 +1,32 @@
+#!/bin/bash
+# Set the tty size to the real terminal window size.
+#
+# A serial console has no out-of-band size information, so the kernel leaves
+# the tty at 80x24 no matter how big the terminal window is. Ask the terminal
+# itself: jump to the far corner, request the cursor position (CSI 6n), and
+# apply the answer with stty. Best effort: if the terminal does not answer
+# within ~2s (e.g. nothing is connected), leave the size untouched.
+#
+# Talks over stdin/stdout, so it works as ExecStartPre= of a unit with
+# StandardInput=tty/StandardOutput=tty, and in an interactive shell.
+
+saved=$(stty -g 2>/dev/null) || exit 0
+stty raw -echo min 0 time 20 2>/dev/null || exit 0
+
+# save cursor, park it far away, ask where it ended up
+printf '\0337\033[999;999H\033[6n'
+
+resp=""
+while IFS= read -r -n1 c && [ -n "$c" ]; do
+    resp+="$c"
+    [ "$c" = "R" ] && break
+done
+
+# restore cursor and terminal state
+printf '\0338'
+stty "$saved" 2>/dev/null
+
+if [[ "$resp" =~ \[([0-9]+)\;([0-9]+)R ]]; then
+    stty rows "${BASH_REMATCH[1]}" cols "${BASH_REMATCH[2]}" 2>/dev/null
+fi
+exit 0

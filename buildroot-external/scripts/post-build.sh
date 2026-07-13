@@ -46,6 +46,8 @@ mkdir -p "${TARGET_DIR}/etc/profile.d"
     echo "export BOARD_NAME=\"${BOARD_NAME}\""
 ) > "${TARGET_DIR}/etc/profile.d/board.sh"
 
+sed -i '\#^/dev/root#d' "${TARGET_DIR}/etc/fstab"
+
 install_bootloader_config
 
 if [ "${BOARD_ID}" = "jethub-j100" ] && [ -d "${TARGET_DIR}/lib/modules" ]; then

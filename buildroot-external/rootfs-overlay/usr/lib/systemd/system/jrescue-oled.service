@@ -1,0 +1,9 @@
+[Unit]
+Description=JetHub rescue OLED UI
+After=recovery-slots.service
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/jrescue-app/oled-grid-application/main.py
+EnvironmentFile=-/etc/machine-info
+Restart=on-failure
+RestartSec=2
