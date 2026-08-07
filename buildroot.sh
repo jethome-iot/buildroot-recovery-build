@@ -15,7 +15,10 @@ fi
 
 docker build -t jrescue-builder .
 
-docker run --rm -it \
+DOCKER_TTY=()
+[ -t 0 ] && DOCKER_TTY=(-it)
+
+docker run --rm "${DOCKER_TTY[@]}" \
   -v "$(pwd):/build" \
   -v "$(realpath "${CACHE_DIR}"):/cache" \
   -e BUILDER_UID="${BUILDER_UID}" \

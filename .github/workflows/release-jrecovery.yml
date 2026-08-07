@@ -1,16 +1,15 @@
 name: Release jrecovery image
-run-name: Release jrecovery ${{ github.ref_name }}
+run-name: ${{ github.event.release.tag_name }}
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.event.release.tag_name }}
   cancel-in-progress: false
 
 jobs:
@@ -29,6 +28,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: recursive
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Build jrecovery image
         run: ./buildroot.sh ${{ matrix.board }}
@@ -39,37 +39,17 @@ jobs:
           set -euo pipefail
           fit=output/images/recovery.fit
           test -f "$fit" || { echo "::error::$fit not produced"; exit 1; }
-          asset="recovery-${{ matrix.name }}-${{ github.ref_name }}.fit"
+          asset="recovery-${{ matrix.name }}-${{ github.event.release.tag_name }}.fit"
           cp "$fit" "$asset"
           sha256sum "$asset" > "$asset.sha256"
           echo "size: $(stat -c%s "$asset") bytes"
           echo "asset=$asset" >> "$GITHUB_OUTPUT"
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: recovery-${{ matrix.name }}
-          path: |
-            ${{ steps.pack.outputs.asset }}
-            ${{ steps.pack.outputs.asset }}.sha256
-          if-no-files-found: error
-
-  release:
-    needs: build
-    runs-on: [self-hosted, ubuntu-latest]
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Publish GitHub Release
+      - name: Upload assets to release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.ref_name }}
-          name: jrecovery ${{ github.ref_name }}
-          generate_release_notes: true
-          make_latest: true
-          files: dist/**
+          tag_name: ${{ github.event.release.tag_name }}
+          files: |
+            ${{ steps.pack.outputs.asset }}
+            ${{ steps.pack.outputs.asset }}.sha256
           fail_on_unmatched_files: true
