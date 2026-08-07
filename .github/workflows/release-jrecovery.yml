@@ -1,0 +1,54 @@
+name: Release jrecovery image
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: [self-hosted, ubuntu-latest]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: jethub_j100
+            name: j100
+          - board: jethub_j310
+            name: j310
+    steps:
+      - name: Checkout (with buildroot submodule)
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Build jrecovery image
+        run: ./buildroot.sh ${{ matrix.board }}
+
+      - name: Name the artifact (board + tag)
+        id: pack
+        run: |
+          set -euo pipefail
+          fit=output/images/recovery.fit
+          test -f "$fit" || { echo "::error::$fit not produced"; exit 1; }
+          asset="recovery-${{ matrix.name }}-${{ github.ref_name }}.fit"
+          cp "$fit" "$asset"
+          sha256sum "$asset" > "$asset.sha256"
+          echo "size: $(stat -c%s "$asset") bytes"
+          echo "asset=$asset" >> "$GITHUB_OUTPUT"
+
+      - name: Attach to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            ${{ steps.pack.outputs.asset }}
+            ${{ steps.pack.outputs.asset }}.sha256
+          fail_on_unmatched_files: true
