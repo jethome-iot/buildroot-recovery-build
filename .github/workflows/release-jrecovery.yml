@@ -1,4 +1,5 @@
 name: Release jrecovery image
+run-name: Release jrecovery ${{ github.ref_name }}
 
 on:
   push:
@@ -24,7 +25,7 @@ jobs:
           - board: jethub_j310
             name: j310
     steps:
-      - name: Checkout (with buildroot submodule)
+      - name: Checkout
         uses: actions/checkout@v7
         with:
           submodules: recursive
@@ -32,7 +33,7 @@ jobs:
       - name: Build jrecovery image
         run: ./buildroot.sh ${{ matrix.board }}
 
-      - name: Name the artifact (board + tag)
+      - name: Name the artifact
         id: pack
         run: |
           set -euo pipefail
@@ -44,11 +45,31 @@ jobs:
           echo "size: $(stat -c%s "$asset") bytes"
           echo "asset=$asset" >> "$GITHUB_OUTPUT"
 
-      - name: Attach to GitHub Release
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-${{ matrix.name }}
+          path: |
+            ${{ steps.pack.outputs.asset }}
+            ${{ steps.pack.outputs.asset }}.sha256
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: [self-hosted, ubuntu-latest]
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
-          files: |
-            ${{ steps.pack.outputs.asset }}
-            ${{ steps.pack.outputs.asset }}.sha256
+          name: jrecovery ${{ github.ref_name }}
+          generate_release_notes: true
+          make_latest: true
+          files: dist/**
           fail_on_unmatched_files: true
