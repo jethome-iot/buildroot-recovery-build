@@ -1,8 +1,12 @@
 [Unit]
 Description=JetHub rescue OLED UI
 After=recovery-slots.service
+ConditionPathExists=/dev/fb0
+StartLimitIntervalSec=120
+StartLimitBurst=5
 
 [Service]
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 20); do [ -e /dev/fb0 ] && exit 0; sleep 0.5; done; exit 0'
 ExecStart=/usr/bin/python3 /usr/lib/jrescue-app/oled-grid-application/main.py
 EnvironmentFile=-/etc/machine-info
 Restart=on-failure
