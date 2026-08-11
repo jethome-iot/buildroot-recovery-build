@@ -53,3 +53,70 @@ jobs:
             ${{ steps.pack.outputs.asset }}
             ${{ steps.pack.outputs.asset }}.sha256
           fail_on_unmatched_files: true
+
+  bump-tools:
+    needs: build
+    runs-on: [self-hosted, ubuntu-latest]
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+      TOOLS_BRANCH: convert_jhos
+    steps:
+      - name: Read checksums from the release
+        id: sums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          rm -rf sums   # the self-hosted workspace keeps the previous run's files
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.sha256' -D sums
+          for b in j100 j310; do
+            sha=$(cut -d' ' -f1 "sums/recovery-$b-$TAG.fit.sha256")
+            [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::no usable $b checksum"; exit 1; }
+            echo "sha_$b=$sha" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Check out jethome-tools
+        uses: actions/checkout@v7
+        with:
+          repository: jethome-iot/jethome-tools
+          ref: ${{ env.TOOLS_BRANCH }}
+          token: ${{ secrets.TOOLS_DISPATCH_TOKEN }}
+          path: jethome-tools
+
+      - name: Bump RECOVERY_* in lib.sh
+        working-directory: jethome-tools
+        env:
+          SHA_J100: ${{ steps.sums.outputs.sha_j100 }}
+          SHA_J310: ${{ steps.sums.outputs.sha_j310 }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad tag '$TAG'"; exit 1; }
+
+          sed -i "s|^RECOVERY_VERSION=.*|RECOVERY_VERSION=\"\${RECOVERY_VERSION:-$TAG}\"|" lib.sh
+          for b in J100 J310; do
+            eval "sha=\$SHA_$b"
+            sed -i "s|^RECOVERY_SHA256_$b=.*|RECOVERY_SHA256_$b=\"\${RECOVERY_SHA256_$b:-$sha}\"|" lib.sh
+          done
+
+          grep -q "RECOVERY_VERSION:-$TAG}" lib.sh || { echo "::error::RECOVERY_VERSION not rewritten"; exit 1; }
+          for b in J100 J310; do
+            eval "sha=\$SHA_$b"
+            grep -q "RECOVERY_SHA256_$b:-$sha}" lib.sh || { echo "::error::RECOVERY_SHA256_$b not rewritten"; exit 1; }
+          done
+
+          bash -n lib.sh || { echo "::error::lib.sh is no longer valid bash"; exit 1; }
+
+      - name: Commit and push
+        working-directory: jethome-tools
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "$TOOLS_BRANCH is already at $TAG, nothing to do"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "recovery OS: bump to $TAG"
+          git push origin "HEAD:$TOOLS_BRANCH"
+
+
