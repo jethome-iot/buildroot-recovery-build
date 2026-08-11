@@ -4,7 +4,7 @@ set -e
 BUILDER_UID="$(id -u)"
 BUILDER_GID="$(id -g)"
 CACHE_DIR="${CACHE_DIR:-./cache}"
-BOARD="${1:-jethub_j300}"
+BOARD="${1:-jethub_j310}"
 shift 2>/dev/null || true
 
 mkdir -p "${CACHE_DIR}"
