@@ -1,52 +1,151 @@
 #!/bin/bash
 #
-# Usage:
-#   jrescue-update http://<dev-host>:8000/jrescue-app.tar.gz   # own tarball
-#   jrescue-update 1.3.3                                       # GitHub release
-#   jrescue-update master                                      # branch snapshot
+# jrescue-update — live-patch the rescue app to a released version.
 #
+# Usage:
+#   jrescue-update                 update to the latest GitHub release
+#   jrescue-update 1.3.8           update to a specific release (leading v optional)
+#   jrescue-update --list          show installed + available releases
+#   jrescue-update --rollback      restore the version replaced by the last update
+#   jrescue-update <branch>        dev: install a branch snapshot (APP_VERSION=dev)
+#   jrescue-update http://h/x.tgz  dev: install an arbitrary tarball
+#
+# Only jrescue-app is swapped (pure Python in /usr/lib/jrescue-app) — the
+# kernel, u-boot and base rootfs cannot be updated this way.
+#
+# The rescue rootfs is a RAM image, so an update lasts until the next reboot.
+# To make a version permanent, bump JRESCUE_APP_VERSION in the recovery build
+# (package/jrescue-app/jrescue-app.mk) and reflash the image.
 
-set -e
+set -euo pipefail
 
-src="$1"
-if [ -z "$src" ]; then
-    echo "usage: jrescue-update <url | version | branch>" >&2
-    exit 1
+REPO="jethome-iot/jrescue-app"
+TARGET="/usr/lib/jrescue-app"
+PARENT="$(dirname "$TARGET")"
+BACKUP="${TARGET}.prev"
+COMPONENTS="core console-application oled-grid-application web-application"
+
+log() { printf '%s\n' "$*"; }
+die() { printf 'jrescue-update: %s\n' "$*" >&2; exit 1; }
+
+current_version() {
+    python3 - "$TARGET/core/config.py" <<'PY' 2>/dev/null || echo "unknown"
+import re, sys
+try:
+    m = re.search(r'^APP_VERSION\s*=\s*["\']([^"\']+)', open(sys.argv[1]).read(), re.M)
+    print(m.group(1) if m else "unknown")
+except Exception:
+    print("unknown")
+PY
+}
+
+resolve_latest() {
+    wget -q -O - "https://api.github.com/repos/$REPO/releases/latest" \
+        | python3 -c 'import sys, json; print(json.load(sys.stdin)["tag_name"])' 2>/dev/null \
+        || die "cannot resolve the latest release (no network?)"
+}
+
+restart_units() {
+    # Clear any failed/start-limit state (e.g. jrescue-oled after crashes),
+    # then (re)start the web UI and every enabled console/oled unit so they
+    # pick up the new code. Running processes keep the old code until restarted.
+    systemctl reset-failed 'jrescue-*' 2>/dev/null || true
+    systemctl restart jrescue-web.service 2>/dev/null || true
+    for u in $(systemctl list-unit-files --no-legend \
+                   'jrescue-console@*.service' 'jrescue-oled.service' 2>/dev/null \
+               | awk '{print $1}'); do
+        systemctl is-enabled "$u" >/dev/null 2>&1 && systemctl restart "$u" 2>/dev/null || true
+    done
+}
+
+# ---- --rollback --------------------------------------------------------------
+if [ "${1:-}" = "--rollback" ]; then
+    [ -d "$BACKUP" ] || die "no previous version to roll back to"
+    swap="$(mktemp -d "${PARENT}/.jrescue-swap.XXXXXX")"
+    mv "$TARGET" "$swap/cur"    # cur    = version being rolled back from
+    mv "$BACKUP" "$TARGET"      # live   = previous version
+    mv "$swap/cur" "$BACKUP"    # backup = rolled-back-from (roll forward again)
+    rmdir "$swap"
+    restart_units
+    log "rolled back to $(current_version) (rescue rootfs is RAM — lasts until reboot)"
+    exit 0
 fi
 
+# ---- --list ------------------------------------------------------------------
+if [ "${1:-}" = "--list" ]; then
+    log "installed: $(current_version)"
+    log "available releases (newest first):"
+    wget -q -O - "https://api.github.com/repos/$REPO/releases?per_page=20" \
+        | python3 -c 'import sys, json
+for r in json.load(sys.stdin):
+    print("  " + r["tag_name"] + ("  [pre]" if r["prerelease"] else ""))' 2>/dev/null \
+        || die "cannot list releases (no network?)"
+    exit 0
+fi
+
+# ---- resolve the source ------------------------------------------------------
+src="${1:-}"
+kind="release"
 case "$src" in
+    "")
+        tag="$(resolve_latest)"; ver="${tag#v}"
+        url="https://github.com/$REPO/releases/download/$tag/jrescue-app-$ver.tar.gz" ;;
     http://*|https://*)
-        url="$src" ;;
-    [0-9]*.[0-9]*)
-        # looks like a version -> release asset
-        url="https://github.com/jethome-iot/jrescue-app/releases/download/v${src}/jrescue-app-${src}.tar.gz" ;;
+        kind="url"; url="$src"; ver="(tarball)" ;;
+    v[0-9]*.[0-9]*|[0-9]*.[0-9]*)
+        ver="${src#v}"; tag="v$ver"
+        url="https://github.com/$REPO/releases/download/$tag/jrescue-app-$ver.tar.gz" ;;
     *)
-        # anything else is a branch (or tag) name -> archive snapshot
-        url="https://github.com/jethome-iot/jrescue-app/archive/refs/heads/${src}.tar.gz" ;;
+        kind="branch"; ver="$src (branch)"
+        url="https://github.com/$REPO/archive/refs/heads/$src.tar.gz" ;;
 esac
 
-tmp=$(mktemp -d)
+log "current: $(current_version)"
+log "target:  $ver"
+log "source:  $url"
+
+# ---- download + verify -------------------------------------------------------
+tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-echo "Downloading ${url} ..."
-wget -q -O "$tmp/app.tar.gz" "$url"
+log "downloading ..."
+wget -q -O "$tmp/app.tar.gz" "$url" || die "download failed"
+[ -s "$tmp/app.tar.gz" ] || die "downloaded archive is empty"
 
+# Release tarballs ship a .sha256 next to them — verify when both are present.
+if [ "$kind" = "release" ] && command -v sha256sum >/dev/null 2>&1 \
+   && wget -q -O "$tmp/app.sha256" "$url.sha256" 2>/dev/null && [ -s "$tmp/app.sha256" ]; then
+    want="$(cut -d' ' -f1 "$tmp/app.sha256")"
+    have="$(sha256sum "$tmp/app.tar.gz" | cut -d' ' -f1)"
+    [ "$want" = "$have" ] || die "checksum mismatch (want $want, got $have) — aborting"
+    log "checksum ok"
+fi
+
+# ---- stage + validate --------------------------------------------------------
 mkdir -p "$tmp/x"
-tar -xf "$tmp/app.tar.gz" -C "$tmp/x"
+tar -xf "$tmp/app.tar.gz" -C "$tmp/x" || die "not a valid tarball"
 
-srcdir=$(find "$tmp/x" -maxdepth 1 -mindepth 1 -type d | head -n1)
-[ -d "$srcdir/core" ] || { echo "no core/ inside the archive" >&2; exit 1; }
+srcdir="$(find "$tmp/x" -maxdepth 1 -mindepth 1 -type d | head -n1)"
+[ -n "$srcdir" ] && [ -d "$srcdir/core" ] || die "archive has no core/ — not a jrescue-app tarball"
 
-for c in core console-application oled-grid-application web-application; do
-    if [ -d "$srcdir/$c" ]; then
-        rm -rf "/usr/lib/jrescue-app/$c"
-        cp -a "$srcdir/$c" /usr/lib/jrescue-app/
-    fi
+stage="$tmp/stage"; mkdir -p "$stage"
+for c in $COMPONENTS; do
+    [ -d "$srcdir/$c" ] || die "archive is missing component: $c"
+    cp -a "$srcdir/$c" "$stage/"
 done
 
-systemctl try-restart jrescue-web.service 2>/dev/null || true
-for u in $(systemctl list-units --plain --no-legend 'jrescue-console@*' 'jrescue-oled.service' 2>/dev/null | awk '{print $1}'); do
-    systemctl restart "$u" 2>/dev/null || true
-done
+log "validating ..."
+python3 -m compileall -q "$stage" >/dev/null 2>&1 || die "new code fails to compile — not installing"
 
-echo "jrescue-app updated (until reboot)"
+# ---- atomic swap (keep the replaced version for --rollback) ------------------
+new="$(mktemp -d "${PARENT}/.jrescue-new.XXXXXX")"
+cp -a "$stage/." "$new/"
+rm -rf "$BACKUP"
+[ -d "$TARGET" ] && mv "$TARGET" "$BACKUP"
+mv "$new" "$TARGET"
+
+restart_units
+
+log "updated: $(current_version)  (previous kept — 'jrescue-update --rollback' to revert)"
+[ "$kind" = "release" ] || log "note: dev source — APP_VERSION reads 'dev'"
+log "note: rescue rootfs is a RAM image — this lasts until reboot; bump the recipe + reflash to persist"
