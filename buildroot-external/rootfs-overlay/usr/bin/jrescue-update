@@ -46,26 +46,48 @@ resolve_latest() {
 }
 
 restart_units() {
-    # Clear any failed/start-limit state (e.g. jrescue-oled after crashes),
-    # then (re)start the web UI and every enabled console/oled unit so they
-    # pick up the new code. Running processes keep the old code until restarted.
+    # Running processes keep the OLD code (open by inode) until restarted, so
+    # re-exec every jrescue unit. Clear failed/start-limit state first so a
+    # crashed jrescue-oled starts cleanly.
     systemctl reset-failed 'jrescue-*' 2>/dev/null || true
-    systemctl restart jrescue-web.service 2>/dev/null || true
-    for u in $(systemctl list-unit-files --no-legend \
-                   'jrescue-console@*.service' 'jrescue-oled.service' 2>/dev/null \
-               | awk '{print $1}'); do
+
+    # web + oled are plain units; (re)start when enabled (restart also starts a
+    # crashed/inactive unit). oled is only enabled on boards with a display.
+    for u in jrescue-web.service jrescue-oled.service; do
         systemctl is-enabled "$u" >/dev/null 2>&1 && systemctl restart "$u" 2>/dev/null || true
     done
+
+    # console is a TEMPLATE — restart the live instances. list-units enumerates
+    # real jrescue-console@<tty> units; list-unit-files would only ever show the
+    # bare @ template (which cannot be restarted), leaving the console on old code.
+    for u in $(systemctl list-units --no-legend --plain --all \
+                   'jrescue-console@*.service' 2>/dev/null | awk '{print $1}'); do
+        case "$u" in *@.service) continue ;; esac   # never the bare template
+        systemctl restart "$u" 2>/dev/null || true
+    done
 }
+
+# One cleanup path for every temp/staging dir (download tmp in $TMPDIR, plus the
+# swap/new dirs created under /usr/lib so the final rename stays same-filesystem).
+tmp=""; new=""; swap=""
+cleanup() { rm -rf ${tmp:+"$tmp"} ${new:+"$new"} ${swap:+"$swap"} 2>/dev/null || true; }
+trap cleanup EXIT
 
 # ---- --rollback --------------------------------------------------------------
 if [ "${1:-}" = "--rollback" ]; then
     [ -d "$BACKUP" ] || die "no previous version to roll back to"
+    if [ ! -d "$TARGET" ]; then
+        # A prior update aborted mid-swap: no live tree, just promote the backup.
+        mv "$BACKUP" "$TARGET"
+        restart_units
+        log "recovered from backup: $(current_version)"
+        exit 0
+    fi
     swap="$(mktemp -d "${PARENT}/.jrescue-swap.XXXXXX")"
     mv "$TARGET" "$swap/cur"    # cur    = version being rolled back from
     mv "$BACKUP" "$TARGET"      # live   = previous version
     mv "$swap/cur" "$BACKUP"    # backup = rolled-back-from (roll forward again)
-    rmdir "$swap"
+    rmdir "$swap"; swap=""
     restart_units
     log "rolled back to $(current_version) (rescue rootfs is RAM — lasts until reboot)"
     exit 0
@@ -106,7 +128,6 @@ log "source:  $url"
 
 # ---- download + verify -------------------------------------------------------
 tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
 
 log "downloading ..."
 wget -q -O "$tmp/app.tar.gz" "$url" || die "download failed"
@@ -119,6 +140,8 @@ if [ "$kind" = "release" ] && command -v sha256sum >/dev/null 2>&1 \
     have="$(sha256sum "$tmp/app.tar.gz" | cut -d' ' -f1)"
     [ "$want" = "$have" ] || die "checksum mismatch (want $want, got $have) — aborting"
     log "checksum ok"
+elif [ "$kind" = "release" ]; then
+    log "warning: no published checksum for this release — installing unverified"
 fi
 
 # ---- stage + validate --------------------------------------------------------
@@ -135,6 +158,15 @@ for c in $COMPONENTS; do
 done
 
 log "validating ..."
+# compileall returns 0 on a tree with NO .py files, so an empty/truncated but
+# right-named archive would pass it — require real Python in each component and
+# APP_VERSION in core before trusting the tree.
+grep -q '^APP_VERSION' "$stage/core/config.py" 2>/dev/null \
+    || die "staged core/config.py has no APP_VERSION — refusing"
+for c in $COMPONENTS; do
+    [ -n "$(find "$stage/$c" -name '*.py' -size +0c | head -n1)" ] \
+        || die "component $c carries no Python — refusing (truncated archive?)"
+done
 python3 -m compileall -q "$stage" >/dev/null 2>&1 || die "new code fails to compile — not installing"
 
 # ---- atomic swap (keep the replaced version for --rollback) ------------------
