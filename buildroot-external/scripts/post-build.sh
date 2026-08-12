@@ -15,28 +15,41 @@ BOARD_DIR=${2}
 OS_RELEASE="${TARGET_DIR}/usr/lib/os-release"
 if [ -f "${OS_RELEASE}" ]; then
     JRESCUE_NAME="jrescue"
-    JRESCUE_VER="1.0"
+    JRESCUE_VER="${JRESCUE_VERSION:-}"
+    if [ -z "${JRESCUE_VER}" ]; then
+        JRESCUE_VER="$(git -C "${BR2_EXTERNAL_JHOS_PATH}" -c safe.directory='*' \
+            describe --tags --always --dirty 2>/dev/null || true)"
+    fi
+    JRESCUE_VER="${JRESCUE_VER#v}"          # strip a leading v (v1.2.3 -> 1.2.3)
+    [ -z "${JRESCUE_VER}" ] && JRESCUE_VER="dev"
 
     sed -i \
         -e "s/^NAME=.*/NAME=${JRESCUE_NAME}/" \
         -e "s/^ID=.*/ID=${JRESCUE_NAME}/" \
+        -e "s/^VERSION=.*/VERSION=${JRESCUE_VER}/" \
         -e "s/^VERSION_ID=.*/VERSION_ID=${JRESCUE_VER}/" \
         -e "s/^PRETTY_NAME=.*/PRETTY_NAME=\"${JRESCUE_NAME} ${JRESCUE_VER}\"/" \
         "${OS_RELEASE}"
 
     grep -q '^NAME=' "${OS_RELEASE}" || echo "NAME=${JRESCUE_NAME}" >> "${OS_RELEASE}"
     grep -q '^ID=' "${OS_RELEASE}" || echo "ID=${JRESCUE_NAME}" >> "${OS_RELEASE}"
+    grep -q '^VERSION=' "${OS_RELEASE}" || echo "VERSION=${JRESCUE_VER}" >> "${OS_RELEASE}"
     grep -q '^VERSION_ID=' "${OS_RELEASE}" || echo "VERSION_ID=${JRESCUE_VER}" >> "${OS_RELEASE}"
     grep -q '^PRETTY_NAME=' "${OS_RELEASE}" || echo "PRETTY_NAME=\"${JRESCUE_NAME} ${JRESCUE_VER}\"" >> "${OS_RELEASE}"
 fi
 
-# Write machine-info
+# Platform code jrescue-app keys on (jethub-j310 -> j310)
+JETHOME_PLATFORM="$(printf '%s' "${BOARD_ID}" | grep -oE 'j[0-9]+' || true)"
+
 (
     echo "CHASSIS=${CHASSIS}"
     echo "DEPLOYMENT=${DEPLOYMENT}"
     echo "HARDWARE_VENDOR=\"JetHome\""
     echo "HARDWARE_MODEL=\"${BOARD_NAME}\""
     echo "BOARD_ID=${BOARD_ID}"
+    echo "BOARD=${BOARD_ID}"
+    echo "BOARD_NAME=\"${BOARD_NAME}\""
+    echo "JETHOME_PLATFORM=${JETHOME_PLATFORM}"
 ) > "${TARGET_DIR}/etc/machine-info"
 
 # Export board identity into login-shell environment
@@ -44,6 +57,7 @@ mkdir -p "${TARGET_DIR}/etc/profile.d"
 (
     echo "export BOARD=${BOARD_ID}"
     echo "export BOARD_NAME=\"${BOARD_NAME}\""
+    echo "export JETHOME_PLATFORM=${JETHOME_PLATFORM}"
 ) > "${TARGET_DIR}/etc/profile.d/board.sh"
 
 sed -i '\#^/dev/root#d' "${TARGET_DIR}/etc/fstab"

@@ -31,6 +31,8 @@ jobs:
           ref: ${{ github.event.release.tag_name }}
 
       - name: Build jrecovery image
+        env:
+          JRESCUE_VERSION: ${{ github.event.release.tag_name }}
         run: ./buildroot.sh ${{ matrix.board }}
 
       - name: Name the artifact

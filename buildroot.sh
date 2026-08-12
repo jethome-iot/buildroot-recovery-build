@@ -23,5 +23,6 @@ docker run --rm "${DOCKER_TTY[@]}" \
   -v "$(realpath "${CACHE_DIR}"):/cache" \
   -e BUILDER_UID="${BUILDER_UID}" \
   -e BUILDER_GID="${BUILDER_GID}" \
+  -e JRESCUE_VERSION="${JRESCUE_VERSION:-}" \
   jrescue-builder \
   make BUILDDIR=/build "${BOARD}" "$@"
