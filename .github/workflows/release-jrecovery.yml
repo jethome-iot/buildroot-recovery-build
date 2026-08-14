@@ -47,17 +47,49 @@ jobs:
           echo "size: $(stat -c%s "$asset") bytes"
           echo "asset=$asset" >> "$GITHUB_OUTPUT"
 
-      - name: Upload assets to release
-        uses: softprops/action-gh-release@v3
+      - name: Stash the image as a workflow artifact
+        uses: actions/upload-artifact@v8
         with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: |
+          name: recovery-${{ matrix.name }}
+          path: |
             ${{ steps.pack.outputs.asset }}
             ${{ steps.pack.outputs.asset }}.sha256
-          fail_on_unmatched_files: true
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: [self-hosted, ubuntu-latest]
+    steps:
+      - name: Fetch stashed images
+        uses: actions/download-artifact@v8
+        with:
+          pattern: recovery-*
+          path: dist
+          merge-multiple: true
+
+      - name: Upload assets to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if gh release upload "$TAG" \
+                 recovery-*.fit recovery-*.fit.sha256 \
+                 --clobber -R "$GITHUB_REPOSITORY"; then
+              echo "uploaded on attempt $attempt"
+              exit 0
+            fi
+            echo "::warning::upload attempt $attempt failed; retrying in $((attempt * 15))s"
+            sleep $((attempt * 15))
+          done
+          echo "::error::asset upload failed after 5 attempts"
+          exit 1
 
   bump-tools:
-    needs: build
+    needs: publish
     runs-on: [self-hosted, ubuntu-latest]
     env:
       TAG: ${{ github.event.release.tag_name }}
@@ -120,5 +152,3 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "recovery OS: bump to $TAG"
           git push origin "HEAD:$TOOLS_BRANCH"
-
-
