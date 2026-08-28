@@ -7,15 +7,15 @@ JetHub recovery flow: front button (periphs-banks10, active-low) pressed ->
 light the recovery LED (periphs-banks26, active-low) and load recovery.fit
 from raw eMMC slot A/B (132/234 MiB, selected by the 'recovery_slot' env var
 persisted by RAUC) via bootm; button released -> turn the recovery LED off,
-arm power-on write protect over 0-336 MiB (u-boot + vendor areas + both
-recovery slots) and continue normal distro boot.
+arm power-on write protect over the two recovery slots (128-336 MiB) and
+continue normal distro boot.
 
 ---
 diff --git a/include/configs/jethub.h b/include/configs/jethub.h
 index 2c44bfc853e..e2d9b6f0c13 100644
 --- a/include/configs/jethub.h
 +++ b/include/configs/jethub.h
-@@ -9,11 +9,62 @@
+@@ -9,11 +9,68 @@
  #define __JETHUB_CONFIG_H
  
  #if defined(CONFIG_MESON_AXG)
@@ -41,12 +41,18 @@ index 2c44bfc853e..e2d9b6f0c13 100644
 + *                    by RAUC via fw_setenv) and boot it. Write-protect is
 + *                    NOT armed so that the recovery system can update its
 + *                    own slots and u-boot.
-+ * Button released -> arm power-on write-protect over 0-336 MiB
-+ *                    (blocks 0x0..0xA8000) so the main OS cannot damage
-+ *                    u-boot or the recovery slots, then continue the
-+ *                    normal distro boot flow. The protection clears on a
-+ *                    full power cycle only (survives warm reboot), hence
-+ *                    recovery self-update requires cold-boot entry.
++ * Button released -> arm power-on write-protect over both recovery slots
++ *                    (blocks 0x40000..0xA8000, 128-336 MiB) so the main OS
++ *                    cannot damage them, then continue the normal distro
++ *                    boot flow. The range is grown outward to WP-group
++ *                    boundaries, which pulls in the last 4 MiB of the
++ *                    vendor area. u-boot and its environment stay writable
++ *                    on purpose: RAUC updates recovery_slot from Linux via
++ *                    fw_setenv, and env (offset 0x380000) shares WP-group 0
++ *                    with u-boot, so protecting it would break slot
++ *                    switching. The protection clears on a full power cycle
++ *                    only (survives warm reboot), hence recovery
++ *                    self-update requires cold-boot entry.
 + */
  #define BOOTENV_DEV_RESCUE(devtypeu, devtypel, instance) \
 +	"recovery_slot=A\0" \
@@ -56,7 +62,7 @@ index 2c44bfc853e..e2d9b6f0c13 100644
 +	"recovery_slot_sectors=0x33000\0" \
 +	"emmc_protect=" \
 +		"if mmc dev 1; then " \
-+		"mmc wp user set 0x0 0xA8000; " \
++		"mmc wp user set 0x40000 0x68000; " \
 +		"fi;\0" \
 +	"boot_recovery=" \
 +		"echo Recovery button pressed, booting slot ${recovery_slot}; " \
