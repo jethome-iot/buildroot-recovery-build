@@ -18,6 +18,13 @@ config BR2_PACKAGE_JRESCUE_APP
 	select BR2_PACKAGE_FREETYPE
 	select BR2_PACKAGE_DEJAVU
 	select BR2_PACKAGE_PYTHON_EVDEV
+	select BR2_PACKAGE_HOSTAPD
+	select BR2_PACKAGE_HOSTAPD_DRIVER_NL80211
+	select BR2_PACKAGE_DNSMASQ
+	select BR2_PACKAGE_IW
+	select BR2_PACKAGE_UTIL_LINUX_RFKILL
+	select BR2_PACKAGE_AVAHI
+	select BR2_PACKAGE_AVAHI_DAEMON
 	help
 	  JetHome rescue application: console, OLED, and web
 	  interfaces for eMMC firmware flashing on JetHub devices.
