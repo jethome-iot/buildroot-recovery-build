@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Tear down the setup-AP radio state and hand the Wi-Fi device back to
+# NetworkManager. Run by jrescue-ap.service's ExecStopPost (i.e. whenever the AP
+# stops — the boot decider, the app's stop_ap(), or the AP->STA handoff).
+#
+# Idempotent: safe to run when the AP was never up or the radio is gone.
+
+IF=$(iw dev 2>/dev/null | awk '$1=="Interface"{print $2; exit}')
+[ -n "$IF" ] || exit 0
+
+# Drop the 10.42.0.1 gateway address so it can't linger on the STA connection.
+ip addr flush dev "$IF" 2>/dev/null || true
+
+# Give the radio back to NM so it can be used as an STA (home Wi-Fi).
+nmcli device set "$IF" managed yes 2>/dev/null || true
+
+# The credentials file describes an AP that no longer exists.
+rm -f /run/jrescue/ap-creds.txt 2>/dev/null || true
+
+exit 0

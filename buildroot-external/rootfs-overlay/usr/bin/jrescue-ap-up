@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# Bring up the JetHub recovery setup-AP: hostapd (WPA2) + dnsmasq (DHCP + captive
+# DNS) on the Wi-Fi radio. The RTL8821CU vendor driver only enforces WPA2 in AP
+# mode via hostapd — NM/wpa_supplicant AP comes up OPEN — so this replaces NM on
+# the Wi-Fi device for the duration of the AP.
+#
+# The radio is single: it is either an AP (here) or an STA (NetworkManager
+# joining the home Wi-Fi), never both. The AP->STA handoff is driven by the app
+# (core/ap.py) which stops this service before nmcli-connecting; jrescue-ap-down
+# (ExecStopPost) hands the device back to NM.
+#
+# Runs in the foreground (exec hostapd) as jrescue-ap.service's main process;
+# dnsmasq is started in the background and killed by the unit's ExecStopPost.
+
+set -e
+
+AP_ADDR=10.42.0.1
+AP_CIDR="${AP_ADDR}/24"
+DHCP_RANGE=10.42.0.50,10.42.0.150,12h
+HOSTAPD_BASE=/etc/hostapd/jrescue-ap.conf
+HOSTAPD_RUN=/run/hostapd-jrescue.conf
+DNSMASQ_PID=/run/jrescue-ap-dnsmasq.pid
+RUN_DIR=/run/jrescue
+CREDS=$RUN_DIR/ap-creds.txt
+
+log() { echo "jrescue-ap: $*"; }
+
+mkdir -p "$RUN_DIR"
+
+# --- make sure the radio isn't soft/hard blocked -----------------------------
+rfkill unblock wifi 2>/dev/null || true
+
+# --- find the Wi-Fi interface (USB radio enumerates late; wait up to ~20s) ----
+IF=""
+i=0
+while [ "$i" -lt 40 ]; do
+    IF=$(iw dev 2>/dev/null | awk '$1=="Interface"{print $2; exit}')
+    [ -n "$IF" ] && break
+    i=$((i + 1))
+    sleep 0.5
+done
+[ -n "$IF" ] || { log "no Wi-Fi interface found"; exit 1; }
+log "using interface $IF"
+
+# --- publish the AP credentials for the frontends (OLED QR / console text) ----
+# The static SSID/PSK live in the hostapd conf; mirror them into one runtime
+# file so console/OLED/web read the same source (and switching to per-device
+# creds later only needs to change what this writes).
+SSID=$(sed -n 's/^ssid=//p' "$HOSTAPD_BASE" | head -n1)
+PSK=$(sed -n 's/^wpa_passphrase=//p' "$HOSTAPD_BASE" | head -n1)
+{
+    echo "SSID=$SSID"
+    echo "PSK=$PSK"
+    echo "ADDR=$AP_ADDR"
+    echo "URL=http://$AP_ADDR"
+} > "$CREDS"
+
+# --- take the radio away from NetworkManager, give it the gateway IP ----------
+# Disconnect any active STA first and WAIT for NM to actually release the device;
+# NM's async teardown can otherwise flush the gateway IP we add just below.
+nmcli device disconnect "$IF" 2>/dev/null || true
+nmcli device set "$IF" managed no 2>/dev/null || true
+i=0
+while [ "$i" -lt 20 ]; do
+    st=$(nmcli -t -f DEVICE,STATE device status 2>/dev/null \
+         | awk -F: -v d="$IF" '$1==d{print $2; exit}')
+    case "$st" in unmanaged|disconnected|"") break ;; esac
+    i=$((i + 1))
+    sleep 0.2
+done
+ip addr flush dev "$IF" 2>/dev/null || true
+ip addr add "$AP_CIDR" dev "$IF"
+ip link set "$IF" up
+
+# --- DHCP + captive DNS (background; ExecStopPost cleans it up) ----------------
+# --address=/#/ANSWERS every A query with our IP so the phone's captive-portal
+# probe (any hostname) resolves to us and pops the "Sign in to network" sheet.
+rm -f "$DNSMASQ_PID"
+dnsmasq \
+    --interface="$IF" --bind-dynamic --except-interface=lo \
+    --dhcp-range="$DHCP_RANGE" --dhcp-authoritative \
+    --dhcp-option=option:router,"$AP_ADDR" \
+    --dhcp-option=option:dns-server,"$AP_ADDR" \
+    --no-resolv --no-hosts \
+    --address=/#/"$AP_ADDR" \
+    --pid-file="$DNSMASQ_PID"
+log "dnsmasq serving $DHCP_RANGE on $IF ($AP_ADDR), captive DNS -> $AP_ADDR"
+
+# --- hostapd (foreground -> becomes the service main process) -----------------
+{ echo "interface=$IF"; cat "$HOSTAPD_BASE"; } > "$HOSTAPD_RUN"
+log "starting hostapd on $IF (SSID $SSID)"
+exec hostapd "$HOSTAPD_RUN"

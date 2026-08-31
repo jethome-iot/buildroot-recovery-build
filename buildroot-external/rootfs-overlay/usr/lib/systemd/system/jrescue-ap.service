@@ -1,0 +1,22 @@
+[Unit]
+Description=JetHub recovery WiFi setup AP (hostapd + dnsmasq)
+After=NetworkManager.service
+Wants=NetworkManager.service
+# If hostapd can't beacon (e.g. driver refuses), give up after a few fast
+# retries instead of flapping the radio between NM and the AP forever — the
+# final ExecStopPost hands the device back to NM for STA use.
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/jrescue-ap-up
+# jrescue-ap-up backgrounds dnsmasq; stop it when hostapd (the main process) exits.
+ExecStopPost=/bin/sh -c 'if [ -f /run/jrescue-ap-dnsmasq.pid ]; then kill "$(cat /run/jrescue-ap-dnsmasq.pid)" 2>/dev/null || true; rm -f /run/jrescue-ap-dnsmasq.pid; fi'
+# Flush the gateway IP and hand the radio back to NetworkManager (for STA use).
+ExecStopPost=/usr/bin/jrescue-ap-down
+Restart=on-failure
+RestartSec=3
+
+# Started only by jrescue-netdecide (boot: no ethernet/wifi) or by the app —
+# deliberately NO [Install]/WantedBy, so the AP is never auto-raised on its own.

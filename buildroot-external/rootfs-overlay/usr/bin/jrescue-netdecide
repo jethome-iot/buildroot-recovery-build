@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Boot-time network decision: raise the Wi-Fi setup-AP only when there is no
+# other way for the user to reach the device.
+#
+#   * ethernet cable present   -> no AP (NetworkManager gets an address via DHCP)
+#   * Wi-Fi already connected   -> no AP (nothing to provision)
+#   * otherwise                 -> cache a scan, then start jrescue-ap.service
+#
+# The radio is single, so we MUST scan the air BEFORE hostapd takes the device;
+# the cached list (/run/jrescue/wifi-scan.txt) is what the captive portal shows.
+#
+# Runs once at boot (jrescue-netdecide.service, after NetworkManager).
+
+RUN_DIR=/run/jrescue
+SCAN=$RUN_DIR/wifi-scan.txt
+
+mkdir -p "$RUN_DIR"
+
+if jrescue-eth-carrier; then
+    echo "jrescue-netdecide: ethernet carrier present -> no AP"
+    exit 0
+fi
+
+if nmcli -t -f TYPE,STATE device status 2>/dev/null | grep -q '^wifi:connected'; then
+    echo "jrescue-netdecide: Wi-Fi already connected -> no AP"
+    exit 0
+fi
+
+# No wired/Wi-Fi connectivity: cache a scan for the portal, then raise the AP.
+nmcli device wifi rescan 2>/dev/null || true
+sleep 2
+nmcli -t -f SSID,SIGNAL,SECURITY device wifi list 2>/dev/null > "$SCAN" || true
+
+echo "jrescue-netdecide: no ethernet/Wi-Fi -> raising setup-AP"
+exec systemctl start jrescue-ap.service

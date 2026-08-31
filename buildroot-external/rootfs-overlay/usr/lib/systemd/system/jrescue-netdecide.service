@@ -1,0 +1,14 @@
+[Unit]
+Description=JetHub recovery: raise the Wi-Fi setup-AP when there is no wired/Wi-Fi network
+# Decide once NetworkManager is up, so ethernet-carrier and wifi-connected can
+# be read from it and the pre-AP scan can run while the radio is still an STA.
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/jrescue-netdecide
+
+[Install]
+WantedBy=multi-user.target
