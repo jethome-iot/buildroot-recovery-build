@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-JRESCUE_APP_VERSION = 2.0.3
+JRESCUE_APP_VERSION = 2.1.0
 JRESCUE_APP_SITE = https://github.com/jethome-iot/jrescue-app/releases/download/v$(JRESCUE_APP_VERSION)
 JRESCUE_APP_SOURCE = jrescue-app-$(JRESCUE_APP_VERSION).tar.gz
 JRESCUE_APP_LICENSE = Proprietary
