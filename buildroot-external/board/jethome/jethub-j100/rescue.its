@@ -27,7 +27,7 @@
 
 		ramdisk {
 			description = "Root filesystem";
-			data = /incbin/("rootfs.cpio.lzma");
+			data = /incbin/("rootfs.cpio.zst");
 			type = "ramdisk";
 			arch = "arm64";
 			os = "linux";
