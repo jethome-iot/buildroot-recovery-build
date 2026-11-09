@@ -30,7 +30,8 @@ fi
 # No wired/Wi-Fi connectivity: cache a scan for the portal, then raise the AP.
 nmcli device wifi rescan 2>/dev/null || true
 sleep 2
-nmcli -t -f SSID,SIGNAL,SECURITY device wifi list 2>/dev/null > "$SCAN" || true
+nmcli -t -f SSID,SIGNAL,SECURITY,RSN-FLAGS,WPA-FLAGS,CHAN,FREQ device wifi list \
+    2>/dev/null > "$SCAN" || true
 
 echo "jrescue-netdecide: no ethernet/Wi-Fi -> raising setup-AP"
 exec systemctl start jrescue-ap.service
