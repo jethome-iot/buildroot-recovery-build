@@ -1,0 +1,22 @@
+#!/bin/sh
+# The setup AP always uses wifi0. Never substitute another Wi-Fi interface.
+
+find_radio() {
+    [ -d /sys/class/net/wifi0 ] || return 1
+    printf '%s\n' wifi0
+}
+
+attempts=1
+case "${1-}" in
+    "") [ "$#" -eq 0 ] || exit 1 ;;
+    --wait) [ "$#" -eq 1 ] || exit 1; attempts=40 ;;
+    *) exit 1 ;;
+esac
+while :; do
+    iface=$(find_radio)
+    result=$?
+    [ "$result" -eq 0 ] && { printf '%s\n' "$iface"; exit 0; }
+    attempts=$((attempts - 1))
+    [ "$attempts" -gt 0 ] || exit 1
+    sleep 0.5
+done

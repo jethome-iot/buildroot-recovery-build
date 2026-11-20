@@ -1,0 +1,8 @@
+[Match]
+Type=wlan
+Driver=rtl8821cu
+Path=platform-xhci-hcd-meson.1.auto-usb-0:1.1.2:1.2
+Property=ID_VENDOR_ID=0bda ID_MODEL_ID=c820
+
+[Link]
+Name=wifi0

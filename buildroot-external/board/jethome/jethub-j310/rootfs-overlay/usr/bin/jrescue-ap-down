@@ -1,0 +1,22 @@
+#!/bin/sh
+# Release only the native netdev this AP instance actually took from NM.
+# A removed radio must not cause us to flush a replacement/external adapter.
+STATE=/run/jrescue/ap-interface
+CREDS=/run/jrescue/ap-creds.txt
+IF=""
+IFINDEX=""
+if [ -f "$STATE" ]; then
+    read -r IF IFINDEX < "$STATE" || true
+fi
+case "$IF" in ''|*[!a-zA-Z0-9_.-]*) IF="" ;; esac
+case "$IFINDEX" in ''|*[!0-9]*) IF="" ;; esac
+if [ -n "$IF" ]; then
+    native=$(jrescue-ap-interface 2>/dev/null) || native=""
+    current=$(cat "/sys/class/net/$IF/ifindex" 2>/dev/null) || current=""
+    if [ "$IF" = "$native" ] && [ "$IFINDEX" = "$current" ]; then
+        ip addr flush dev "$IF" 2>/dev/null || true
+        nmcli device set "$IF" managed yes 2>/dev/null || true
+    fi
+fi
+rm -f "$STATE" "$CREDS"
+exit 0
